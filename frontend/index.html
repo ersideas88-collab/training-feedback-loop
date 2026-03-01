@@ -2,26 +2,140 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Training Loop — High-Stress Feedback System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Training Loop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --card-border: #e5e7eb;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --surface: #f3f4f6;
+      --surface-alt: #f9fafb;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --nav-active-bg: #111827;
+      --nav-active-text: #ffffff;
+      --btn-primary-bg: #111827;
+      --btn-primary-text: #ffffff;
+      --ring-track: #f3f4f6;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1117;
+        --card: #1a1d27;
+        --card-border: #2a2d3a;
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --text-muted: #64748b;
+        --surface: #1e2130;
+        --surface-alt: #161825;
+        --nav-active-bg: #ffffff;
+        --nav-active-text: #111827;
+        --btn-primary-bg: #ffffff;
+        --btn-primary-text: #111827;
+        --ring-track: #2a2d3a;
+      }
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
-      background: #f5f5f7;
-      color: #111827;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       justify-content: center;
       padding: 24px 16px;
+      padding: 24px 16px env(safe-area-inset-bottom);
+      -webkit-font-smoothing: antialiased;
     }
-    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; background: #e5e7eb; outline: none; cursor: pointer; }
-    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent, #6b7280); cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
-    input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--accent, #6b7280); cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
-    input[type="number"] { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 14px; outline: none; background: #f9fafb; font-family: inherit; }
-    input[type="number"]:focus { border-color: #111827; }
-    button { font-family: inherit; cursor: pointer; }
+
+    /* Slider styling */
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 8px; border-radius: 4px;
+      background: var(--surface); outline: none; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--accent, #6b7280); cursor: pointer;
+      border: 3px solid var(--card);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:active { transform: scale(1.2); }
+    input[type="range"]::-moz-range-thumb {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--accent, #6b7280); cursor: pointer;
+      border: 3px solid var(--card);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    }
+
+    /* Number inputs */
+    input[type="number"] {
+      width: 100%; padding: 10px 12px; border-radius: 10px;
+      border: 1.5px solid var(--card-border); font-size: 15px;
+      outline: none; background: var(--surface-alt);
+      font-family: inherit; color: var(--text-primary);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"]:focus {
+      border-color: var(--text-primary);
+      box-shadow: 0 0 0 3px rgba(17,24,39,0.08);
+    }
+
+    button { font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
     button:active { transform: scale(0.97); }
+
+    /* View transitions */
+    .view-enter { animation: fadeSlideIn 0.3s ease forwards; }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Success animation */
+    .success-pop { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Pulse for live score */
+    .pulse-ring { animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    /* Smooth tab indicator */
+    .tab-bar { position: relative; }
+    .tab-indicator {
+      position: absolute; height: calc(100% - 8px); top: 4px;
+      border-radius: 8px; background: var(--nav-active-bg);
+      transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 2px; }
   </style>
 </head>
 <body>
@@ -32,26 +146,36 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 
   <script type="text/babel">
-    const { useState, useMemo } = React;
+    const { useState, useMemo, useEffect, useRef, useCallback } = React;
 
+    // ── Config ──────────────────────────────────────────────
     const INTENSITY_CONFIG = {
-      deload:   { color: "#6366f1", bg: "#eef2ff", label: "DELOAD",   emoji: "\u{1F9D8}" },
-      low:      { color: "#06b6d4", bg: "#ecfeff", label: "LOW",      emoji: "\u{1F6B6}" },
-      moderate: { color: "#f59e0b", bg: "#fffbeb", label: "MODERATE", emoji: "\u{1F3CB}\uFE0F" },
-      high:     { color: "#ef4444", bg: "#fef2f2", label: "HIGH",     emoji: "\u{1F525}" },
-      peak:     { color: "#dc2626", bg: "#fee2e2", label: "PEAK",     emoji: "\u26A1" },
+      deload:   { color: "#818cf8", bg: "#eef2ff", darkBg: "#1e1b4b", label: "DELOAD",   emoji: "\u{1F9D8}", desc: "Active recovery" },
+      low:      { color: "#22d3ee", bg: "#ecfeff", darkBg: "#083344", label: "LOW",      emoji: "\u{1F6B6}", desc: "Easy movement" },
+      moderate: { color: "#fbbf24", bg: "#fffbeb", darkBg: "#422006", label: "MODERATE", emoji: "\u{1F3CB}\uFE0F", desc: "Steady work" },
+      high:     { color: "#f87171", bg: "#fef2f2", darkBg: "#450a0a", label: "HIGH",     emoji: "\u{1F525}", desc: "Push hard" },
+      peak:     { color: "#ef4444", bg: "#fee2e2", darkBg: "#7f1d1d", label: "PEAK",     emoji: "\u26A1",   desc: "All out" },
     };
 
     const MOCK_HISTORY = [
-      { date: "Feb 21", score: 82, intensity: "high", status: "completed" },
-      { date: "Feb 22", score: 74, intensity: "high", status: "completed" },
-      { date: "Feb 23", score: 58, intensity: "moderate", status: "completed" },
-      { date: "Feb 24", score: 42, intensity: "low", status: "skipped" },
-      { date: "Feb 25", score: 35, intensity: "deload", status: "completed" },
-      { date: "Feb 26", score: 51, intensity: "moderate", status: "completed" },
-      { date: "Feb 27", score: 63, intensity: "moderate", status: "completed" },
+      { date: "2026-02-21", score: 82, intensity: "high", status: "completed" },
+      { date: "2026-02-22", score: 74, intensity: "high", status: "completed" },
+      { date: "2026-02-23", score: 58, intensity: "moderate", status: "completed" },
+      { date: "2026-02-24", score: 42, intensity: "low", status: "skipped" },
+      { date: "2026-02-25", score: 35, intensity: "deload", status: "completed" },
+      { date: "2026-02-26", score: 51, intensity: "moderate", status: "completed" },
+      { date: "2026-02-27", score: 63, intensity: "moderate", status: "completed" },
     ];
 
+    const FOCUS_MAP = {
+      deload: "Recovery \u2014 stretching, breathing, gentle movement",
+      low: "Mobility + light conditioning",
+      moderate: "Strength maintenance \u2014 controlled loads",
+      high: "Strength + conditioning \u2014 push it",
+      peak: "Max effort / testing day",
+    };
+
+    // ── Logic ───────────────────────────────────────────────
     function computeReadiness(data) {
       const weights = { stress: -0.20, sleepQuality: 0.25, soreness: -0.15, energy: 0.25, motivation: 0.15 };
       let raw = 0;
@@ -82,62 +206,96 @@
       return diff > 8 ? "improving" : diff < -8 ? "declining" : "stable";
     }
 
-    const FOCUS_MAP = {
-      deload: "Recovery \u2014 stretching, breathing, gentle movement",
-      low: "Mobility + light conditioning",
-      moderate: "Strength maintenance \u2014 controlled loads",
-      high: "Strength + conditioning \u2014 push it",
-      peak: "Max effort / testing day",
-    };
+    function formatDate(dateStr) {
+      const d = new Date(dateStr + "T12:00:00");
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
 
-    function Slider({ label, value, onChange, inverted }) {
+    function formatDay(dateStr) {
+      const d = new Date(dateStr + "T12:00:00");
+      return d.toLocaleDateString("en-US", { weekday: "short" });
+    }
+
+    // ── Components ──────────────────────────────────────────
+
+    function Slider({ label, value, onChange, inverted, icon }) {
       const pct = ((value - 1) / 9) * 100;
       const barColor = inverted
         ? `hsl(${120 - pct * 1.2}, 70%, 50%)`
         : `hsl(${pct * 1.2}, 70%, 50%)`;
+
       return (
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13, fontWeight: 600, color: "#374151" }}>
-            <span>{label}</span>
-            <span style={{ color: barColor, fontWeight: 700, fontSize: 16, minWidth: 24, textAlign: "right" }}>{value}</span>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>{icon}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{label}</span>
+            </div>
+            <div style={{
+              background: barColor, color: "#fff", fontWeight: 700, fontSize: 13,
+              width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background 0.2s",
+            }}>
+              {value}
+            </div>
           </div>
-          <input type="range" min={1} max={10} value={value} onChange={e => onChange(+e.target.value)} style={{ "--accent": barColor }} />
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#9ca3af", marginTop: 3 }}>
-            <span>{inverted ? "Low" : "Poor"}</span>
-            <span>{inverted ? "Extreme" : "Excellent"}</span>
+          {/* Tick marks */}
+          <div style={{ position: "relative", paddingBottom: 16 }}>
+            <input type="range" min={1} max={10} value={value} onChange={e => onChange(+e.target.value)} style={{ "--accent": barColor }} />
+            <div style={{ display: "flex", justifyContent: "space-between", position: "absolute", bottom: 0, left: 2, right: 2 }}>
+              {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                <span key={n} style={{ fontSize: 9, color: n === value ? barColor : "var(--text-muted)", fontWeight: n === value ? 700 : 400, transition: "color 0.2s" }}>{n}</span>
+              ))}
+            </div>
           </div>
         </div>
       );
     }
 
-    function BiometricInput({ label, unit, value, onChange, placeholder }) {
+    function BiometricInput({ label, unit, value, onChange, placeholder, min, max, icon }) {
+      const clamp = (v) => {
+        if (v === "") return "";
+        const n = Number(v);
+        if (min !== undefined && n < min) return min;
+        if (max !== undefined && n > max) return max;
+        return n;
+      };
       return (
-        <div style={{ flex: 1, minWidth: 120 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>{label}</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <input type="number" value={value} onChange={e => onChange(e.target.value ? +e.target.value : "")} placeholder={placeholder} />
-            <span style={{ fontSize: 11, color: "#9ca3af", whiteSpace: "nowrap" }}>{unit}</span>
+        <div style={{ flex: 1, minWidth: 140 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
+            <span style={{ fontSize: 14 }}>{icon}</span> {label}
+          </label>
+          <div style={{ position: "relative" }}>
+            <input
+              type="number" inputMode="decimal" value={value}
+              onChange={e => onChange(clamp(e.target.value))}
+              placeholder={placeholder}
+              min={min} max={max} step="any"
+            />
+            <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "var(--text-muted)", pointerEvents: "none" }}>{unit}</span>
           </div>
         </div>
       );
     }
 
-    function ScoreRing({ score, size = 140 }) {
+    function ScoreRing({ score, size = 140, animated = true }) {
       const r = (size - 16) / 2;
       const c = Math.PI * 2 * r;
       const offset = c - (score / 100) * c;
-      const color = score >= 70 ? "#22c55e" : score >= 45 ? "#f59e0b" : "#ef4444";
+      const color = score >= 70 ? "var(--green)" : score >= 45 ? "var(--amber)" : "var(--red)";
+      const label = score >= 70 ? "Ready" : score >= 45 ? "Moderate" : "Recover";
+
       return (
-        <div style={{ position: "relative", width: size, height: size }}>
+        <div style={{ position: "relative", width: size, height: size }} className={animated ? "pulse-ring" : ""}>
           <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-            <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#f3f4f6" strokeWidth={10} />
+            <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--ring-track)" strokeWidth={10} />
             <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={10}
               strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
-              style={{ transition: "stroke-dashoffset 0.8s ease" }} />
+              style={{ transition: "stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s" }} />
           </svg>
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 36, fontWeight: 800, color }}>{Math.round(score)}</span>
-            <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>/ 100</span>
+            <span style={{ fontSize: size * 0.26, fontWeight: 800, color, transition: "color 0.3s" }}>{Math.round(score)}</span>
+            <span style={{ fontSize: size * 0.08, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>{label}</span>
           </div>
         </div>
       );
@@ -145,14 +303,25 @@
 
     function MiniBar({ history }) {
       return (
-        <div style={{ display: "flex", alignItems: "end", gap: 6, height: 70, justifyContent: "center" }}>
+        <div style={{ display: "flex", alignItems: "end", gap: 4, height: 80, justifyContent: "center" }}>
           {history.map((d, i) => {
-            const h = Math.max(6, (d.score / 100) * 56);
-            const color = d.score >= 70 ? "#22c55e" : d.score >= 45 ? "#f59e0b" : "#ef4444";
+            const h = Math.max(8, (d.score / 100) * 64);
+            const color = d.score >= 70 ? "var(--green)" : d.score >= 45 ? "var(--amber)" : "var(--red)";
+            const skipped = d.status === "skipped";
             return (
               <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flex: 1 }}>
-                <div style={{ width: "100%", maxWidth: 32, height: h, background: color, borderRadius: 5, opacity: d.status === "skipped" ? 0.35 : 1, transition: "height 0.4s ease" }} />
-                <span style={{ fontSize: 10, color: "#9ca3af", fontWeight: 500 }}>{d.date.split(" ")[1]}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: skipped ? "var(--text-muted)" : color, opacity: skipped ? 0.5 : 1 }}>{d.score}</span>
+                <div style={{
+                  width: "100%", maxWidth: 36, height: h, borderRadius: 6,
+                  background: skipped ? "var(--surface)" : color,
+                  opacity: skipped ? 0.4 : 1,
+                  transition: "height 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+                  border: skipped ? `1.5px dashed var(--text-muted)` : "none",
+                }} />
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>{formatDay(d.date)}</div>
+                  <div style={{ fontSize: 9, color: "var(--text-muted)" }}>{formatDate(d.date)}</div>
+                </div>
               </div>
             );
           })}
@@ -160,49 +329,119 @@
       );
     }
 
-    function PlanCard({ intensity, focus, notes, date }) {
+    function PlanCard({ intensity, focus, notes, date, isResult }) {
       const cfg = INTENSITY_CONFIG[intensity];
+      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const bgColor = isDark ? cfg.darkBg : cfg.bg;
+
       return (
-        <div style={{ background: cfg.bg, border: `2px solid ${cfg.color}`, borderRadius: 16, padding: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+        <div style={{
+          background: bgColor, border: `2px solid ${cfg.color}40`, borderRadius: 20, padding: 24,
+          boxShadow: `0 4px 24px ${cfg.color}15`,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1.2 }}>Tomorrow's Session</div>
-              <div style={{ fontSize: 13, color: "#9ca3af", marginTop: 3 }}>{date}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1.5 }}>
+                {isResult ? "Tomorrow's Session" : "Today's Plan"}
+              </div>
+              <div style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 4 }}>{date}</div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: cfg.color, color: "#fff", padding: "7px 18px", borderRadius: 20, fontWeight: 700, fontSize: 14, boxShadow: `0 2px 8px ${cfg.color}33` }}>
-              <span>{cfg.emoji}</span>
-              <span>{cfg.label}</span>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              background: cfg.color, color: "#fff",
+              padding: "8px 20px", borderRadius: 24,
+              fontWeight: 700, fontSize: 14,
+              boxShadow: `0 4px 12px ${cfg.color}40`,
+            }}>
+              <span style={{ fontSize: 18 }}>{cfg.emoji}</span>
+              <div>
+                <div>{cfg.label}</div>
+                <div style={{ fontSize: 10, fontWeight: 500, opacity: 0.85 }}>{cfg.desc}</div>
+              </div>
             </div>
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 8 }}>{focus}</div>
-          {notes && <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.6, background: "#ffffff99", borderRadius: 10, padding: 14, marginTop: 8, backdropFilter: "blur(4px)" }}>{notes}</div>}
+          <div style={{ fontSize: 19, fontWeight: 700, color: "var(--text-primary)", marginBottom: 10, lineHeight: 1.3 }}>{focus}</div>
+          {notes && (
+            <div style={{
+              fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.7,
+              background: isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.7)",
+              borderRadius: 12, padding: 16, marginTop: 8,
+              backdropFilter: "blur(8px)",
+            }}>
+              {notes}
+            </div>
+          )}
         </div>
       );
     }
 
     function HistoryRow({ day }) {
       const cfg = INTENSITY_CONFIG[day.intensity];
+      const skipped = day.status === "skipped";
       return (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
-          <div style={{ width: 44, fontSize: 12, fontWeight: 600, color: "#6b7280" }}>{day.date}</div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "14px 0",
+          borderBottom: "1px solid var(--surface)", opacity: skipped ? 0.55 : 1,
+          transition: "opacity 0.2s",
+        }}>
+          <div style={{ width: 52 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>{formatDate(day.date)}</div>
+            <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{formatDay(day.date)}</div>
+          </div>
           <div style={{ flex: 1 }}>
-            <div style={{ height: 7, background: "#f3f4f6", borderRadius: 4, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${day.score}%`, background: cfg.color, borderRadius: 4, transition: "width 0.6s ease" }} />
+            <div style={{ height: 8, background: "var(--surface)", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{
+                height: "100%", width: `${day.score}%`, background: cfg.color, borderRadius: 4,
+                transition: "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+              }} />
             </div>
           </div>
-          <div style={{ width: 32, fontSize: 14, fontWeight: 700, color: cfg.color, textAlign: "right" }}>{day.score}</div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: cfg.color, background: cfg.bg, padding: "4px 10px", borderRadius: 10, width: 78, textAlign: "center", letterSpacing: 0.5 }}>{cfg.label}</div>
-          <div style={{ fontSize: 16, width: 24, textAlign: "center", opacity: day.status === "skipped" ? 0.35 : 1, color: day.status === "completed" ? "#22c55e" : "#9ca3af" }}>
+          <div style={{ width: 34, fontSize: 15, fontWeight: 700, color: cfg.color, textAlign: "right" }}>{day.score}</div>
+          <div style={{
+            fontSize: 10, fontWeight: 700, color: cfg.color,
+            background: "var(--surface)", padding: "5px 10px", borderRadius: 8,
+            width: 80, textAlign: "center", letterSpacing: 0.5,
+          }}>
+            {cfg.label}
+          </div>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 14, fontWeight: 700,
+            background: day.status === "completed" ? "#22c55e15" : "var(--surface)",
+            color: day.status === "completed" ? "var(--green)" : "var(--text-muted)",
+          }}>
             {day.status === "completed" ? "\u2713" : day.status === "skipped" ? "\u2014" : "\u00B7"}
           </div>
         </div>
       );
     }
 
+    function EmptyState({ icon, title, subtitle }) {
+      return (
+        <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--text-muted)" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>{icon}</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 4 }}>{title}</div>
+          <div style={{ fontSize: 13 }}>{subtitle}</div>
+        </div>
+      );
+    }
+
+    function StatCard({ value, label, color }) {
+      return (
+        <div style={{ flex: 1, minWidth: 90, textAlign: "center", padding: "14px 8px", background: "var(--card)", borderRadius: 14, border: "1px solid var(--card-border)" }}>
+          <div style={{ fontSize: 28, fontWeight: 800, color: color || "var(--text-primary)" }}>{value}</div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500, marginTop: 4 }}>{label}</div>
+        </div>
+      );
+    }
+
+    // ── App ─────────────────────────────────────────────────
     function App() {
       const [view, setView] = useState("checkin");
       const [submitted, setSubmitted] = useState(false);
       const [planStatus, setPlanStatus] = useState(null);
+      const [confirming, setConfirming] = useState(false);
+      const tabRefs = useRef({});
 
       const [stress, setStress] = useState(5);
       const [sleepQuality, setSleepQuality] = useState(6);
@@ -217,109 +456,175 @@
       const trend = getTrend(MOCK_HISTORY);
       const intensity = getIntensity(score, trend);
 
-      const noteParts = [`Readiness: ${Math.round(score)}/100`, `Trend: ${trend}`];
-      if (soreness >= 7) noteParts.push("High soreness \u2014 avoid heavy eccentric loading");
-      if (sleepHours < 6) noteParts.push("Sleep deficit \u2014 prioritize recovery");
+      const noteParts = [];
+      if (soreness >= 7) noteParts.push("\u26A0\uFE0F High soreness \u2014 avoid heavy eccentric loading");
+      if (sleepHours && sleepHours < 6) noteParts.push("\u{1F634} Sleep deficit \u2014 prioritize recovery");
+      if (trend === "declining") noteParts.push("\u{1F4C9} Declining trend \u2014 consider a scheduled deload");
+      if (noteParts.length === 0) noteParts.push("All systems looking good. Train with confidence.");
 
-      const navStyle = (active) => ({
-        padding: "10px 0", borderRadius: 10, border: "none", flex: 1, fontWeight: 600, fontSize: 13,
-        background: active ? "#111827" : "transparent", color: active ? "#fff" : "#6b7280",
-        transition: "all 0.2s",
-      });
+      const handleSubmit = () => {
+        if (!confirming) { setConfirming(true); return; }
+        setSubmitted(true);
+        setConfirming(false);
+      };
 
-      const cardStyle = { background: "#fff", borderRadius: 16, padding: 24, border: "1px solid #e5e7eb", marginBottom: 16 };
+      const handleReset = () => {
+        setStress(5); setSleepQuality(6); setSoreness(4); setEnergy(6); setMotivation(7);
+        setHrv(""); setRhr(""); setSleepHours("");
+        setSubmitted(false); setConfirming(false);
+      };
+
+      const tabs = [
+        { id: "checkin", label: "Check In", icon: "\u{1F4CB}" },
+        { id: "plan", label: "Plan", icon: "\u{1F3AF}" },
+        { id: "history", label: "History", icon: "\u{1F4CA}" },
+      ];
+
+      // Tab indicator position
+      const [indicatorStyle, setIndicatorStyle] = useState({});
+      useEffect(() => {
+        const el = tabRefs.current[view];
+        if (el) setIndicatorStyle({ left: el.offsetLeft, width: el.offsetWidth });
+      }, [view]);
+
+      const cardStyle = {
+        background: "var(--card)", borderRadius: 20, padding: 24,
+        border: "1px solid var(--card-border)", marginBottom: 16,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+      };
 
       return (
         <div>
           {/* Header */}
-          <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: -0.5 }}>Training Loop</div>
-            <div style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>High-Stress Feedback System</div>
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10, background: "var(--text-primary)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 18, color: "var(--bg)",
+              }}>
+                \u26A1
+              </div>
+              <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>Training Loop</span>
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>High-Stress Feedback System</div>
           </div>
 
-          {/* Nav */}
-          <div style={{ display: "flex", gap: 4, background: "#f3f4f6", borderRadius: 12, padding: 4, marginBottom: 24 }}>
-            <button style={navStyle(view === "checkin")} onClick={() => { setView("checkin"); setSubmitted(false); }}>Check In</button>
-            <button style={navStyle(view === "plan")} onClick={() => setView("plan")}>Today's Plan</button>
-            <button style={navStyle(view === "history")} onClick={() => setView("history")}>History</button>
+          {/* Tab Bar */}
+          <div className="tab-bar" style={{ display: "flex", gap: 4, background: "var(--surface)", borderRadius: 14, padding: 4, marginBottom: 24, position: "relative" }}>
+            <div className="tab-indicator" style={indicatorStyle} />
+            {tabs.map(t => (
+              <button key={t.id} ref={el => tabRefs.current[t.id] = el}
+                onClick={() => { setView(t.id); if (t.id === "checkin") setSubmitted(false); }}
+                style={{
+                  padding: "12px 0", borderRadius: 10, border: "none", flex: 1,
+                  fontWeight: 600, fontSize: 13, position: "relative", zIndex: 1,
+                  background: "transparent",
+                  color: view === t.id ? "var(--nav-active-text)" : "var(--text-muted)",
+                  transition: "color 0.3s",
+                }}
+              >
+                <span style={{ marginRight: 4, fontSize: 14 }}>{t.icon}</span> {t.label}
+              </button>
+            ))}
           </div>
 
           {/* ── CHECK-IN VIEW ── */}
           {view === "checkin" && !submitted && (
-            <div>
+            <div className="view-enter">
               <div style={cardStyle}>
-                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 18, color: "#374151" }}>How are you feeling?</div>
-                <Slider label="Stress Level" value={stress} onChange={setStress} inverted />
-                <Slider label="Sleep Quality" value={sleepQuality} onChange={setSleepQuality} />
-                <Slider label="Soreness" value={soreness} onChange={setSoreness} inverted />
-                <Slider label="Energy" value={energy} onChange={setEnergy} />
-                <Slider label="Motivation" value={motivation} onChange={setMotivation} />
+                <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "var(--text-primary)" }}>How are you feeling?</div>
+                <Slider label="Stress" value={stress} onChange={setStress} inverted icon="\u{1F9E0}" />
+                <Slider label="Sleep Quality" value={sleepQuality} onChange={setSleepQuality} icon="\u{1F303}" />
+                <Slider label="Soreness" value={soreness} onChange={setSoreness} inverted icon="\u{1FA79}" />
+                <Slider label="Energy" value={energy} onChange={setEnergy} icon="\u{1F50B}" />
+                <Slider label="Motivation" value={motivation} onChange={setMotivation} icon="\u{1F4AA}" />
               </div>
 
               <div style={cardStyle}>
-                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "#374151" }}>
-                  Biometrics <span style={{ fontWeight: 400, color: "#9ca3af", fontSize: 12 }}>(optional)</span>
+                <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: "var(--text-primary)" }}>
+                  Biometrics <span style={{ fontWeight: 400, color: "var(--text-muted)", fontSize: 12, marginLeft: 4 }}>optional</span>
                 </div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <BiometricInput label="HRV" unit="ms" value={hrv} onChange={setHrv} placeholder="55" />
-                  <BiometricInput label="Resting HR" unit="bpm" value={rhr} onChange={setRhr} placeholder="60" />
-                  <BiometricInput label="Sleep" unit="hrs" value={sleepHours} onChange={setSleepHours} placeholder="7.5" />
+                  <BiometricInput label="HRV" unit="ms" value={hrv} onChange={setHrv} placeholder="55" min={0} max={300} icon="\u2764\uFE0F" />
+                  <BiometricInput label="Resting HR" unit="bpm" value={rhr} onChange={setRhr} placeholder="60" min={30} max={200} icon="\u{1FA93}" />
+                  <BiometricInput label="Sleep" unit="hrs" value={sleepHours} onChange={setSleepHours} placeholder="7.5" min={0} max={24} icon="\u{1F634}" />
                 </div>
               </div>
 
-              {/* Live readiness */}
-              <div style={{ ...cardStyle, background: "#f9fafb", textAlign: "center" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 14 }}>Live Readiness Preview</div>
-                <div style={{ display: "flex", justifyContent: "center" }}>
-                  <ScoreRing score={score} size={110} />
-                </div>
-                <div style={{ marginTop: 12, fontSize: 12, color: INTENSITY_CONFIG[intensity].color, fontWeight: 700 }}>
-                  {INTENSITY_CONFIG[intensity].emoji} Tomorrow: {INTENSITY_CONFIG[intensity].label}
-                </div>
-              </div>
-
-              <button onClick={() => setSubmitted(true)} style={{
-                width: "100%", padding: 16, borderRadius: 12, border: "none", background: "#111827", color: "#fff",
-                fontSize: 16, fontWeight: 700, transition: "transform 0.1s", marginTop: 4,
+              {/* Live readiness — sticky feel */}
+              <div style={{
+                ...cardStyle, background: "var(--surface-alt)", textAlign: "center",
+                position: "sticky", bottom: 80, zIndex: 5,
+                boxShadow: "0 -4px 20px rgba(0,0,0,0.06)",
               }}>
-                Submit Check-In &rarr;
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
+                  <ScoreRing score={score} size={90} />
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1 }}>Tomorrow</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: INTENSITY_CONFIG[intensity].color, marginTop: 2 }}>
+                      {INTENSITY_CONFIG[intensity].emoji} {INTENSITY_CONFIG[intensity].label}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>{INTENSITY_CONFIG[intensity].desc}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit button with confirmation */}
+              <button onClick={handleSubmit} style={{
+                width: "100%", padding: 18, borderRadius: 14, border: "none",
+                background: confirming ? "var(--green)" : "var(--btn-primary-bg)",
+                color: confirming ? "#fff" : "var(--btn-primary-text)",
+                fontSize: 16, fontWeight: 700, transition: "all 0.2s", marginTop: 4,
+                boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
+              }}>
+                {confirming ? "Tap again to confirm \u2713" : "Submit Check-In \u2192"}
               </button>
+
+              {confirming && (
+                <button onClick={() => setConfirming(false)} style={{
+                  width: "100%", padding: 12, borderRadius: 10, border: "none",
+                  background: "transparent", color: "var(--text-muted)", fontSize: 13, fontWeight: 500, marginTop: 8,
+                }}>
+                  Cancel
+                </button>
+              )}
             </div>
           )}
 
           {/* ── POST-SUBMIT ── */}
           {view === "checkin" && submitted && (
-            <div>
-              <div style={{ textAlign: "center", marginBottom: 24 }}>
-                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#22c55e", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-                  <span style={{ color: "#fff", fontSize: 28, fontWeight: 700 }}>{"\u2713"}</span>
-                </div>
-                <div style={{ fontSize: 20, fontWeight: 700 }}>Check-in recorded</div>
-                <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Feb 28, 2026</div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-                <ScoreRing score={score} />
-              </div>
-
-              <PlanCard intensity={intensity} focus={FOCUS_MAP[intensity]} notes={noteParts.join(" \u00B7 ")} date="March 1, 2026" />
-
-              <div style={{ ...cardStyle, marginTop: 16, padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 8 }}>API Response Preview</div>
-                <pre style={{ fontSize: 11, color: "#374151", background: "#f3f4f6", borderRadius: 10, padding: 14, overflow: "auto", lineHeight: 1.5, maxHeight: 200 }}>
-{JSON.stringify({
-  check_in: { date: "2026-02-28", readiness_score: Math.round(score), stress: stress, energy: energy, soreness: soreness },
-  session_plan: { date: "2026-03-01", intensity: intensity, focus: FOCUS_MAP[intensity], status: "generated" }
-}, null, 2)}
-                </pre>
-              </div>
-
-              <div style={{ textAlign: "center", marginTop: 16 }}>
-                <button onClick={() => setSubmitted(false)} style={{
-                  padding: "10px 24px", borderRadius: 10, border: "1px solid #d1d5db", background: "#fff",
-                  color: "#374151", fontSize: 13, fontWeight: 600,
+            <div className="view-enter">
+              <div style={{ textAlign: "center", marginBottom: 28 }}>
+                <div className="success-pop" style={{
+                  width: 64, height: 64, borderRadius: "50%", background: "var(--green)",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14,
+                  boxShadow: "0 4px 20px rgba(34, 197, 94, 0.35)",
                 }}>
-                  &larr; Edit Check-In
+                  <span style={{ color: "#fff", fontSize: 32, fontWeight: 700 }}>{"\u2713"}</span>
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)" }}>You're locked in</div>
+                <div style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 6 }}>Check-in recorded \u00B7 Tomorrow's plan is ready</div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
+                <ScoreRing score={score} size={150} animated={false} />
+              </div>
+
+              <PlanCard intensity={intensity} focus={FOCUS_MAP[intensity]} notes={noteParts.join("\n")} date="March 1, 2026" isResult />
+
+              <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+                <button onClick={() => setSubmitted(false)} style={{
+                  flex: 1, padding: "14px 0", borderRadius: 12, border: "1.5px solid var(--card-border)",
+                  background: "var(--card)", color: "var(--text-secondary)", fontSize: 14, fontWeight: 600,
+                }}>
+                  \u2190 Edit
+                </button>
+                <button onClick={handleReset} style={{
+                  flex: 1, padding: "14px 0", borderRadius: 12, border: "none",
+                  background: "var(--surface)", color: "var(--text-muted)", fontSize: 14, fontWeight: 600,
+                }}>
+                  Reset All
                 </button>
               </div>
             </div>
@@ -327,49 +632,59 @@
 
           {/* ── PLAN VIEW ── */}
           {view === "plan" && (
-            <div>
-              <PlanCard intensity={intensity} focus={FOCUS_MAP[intensity]} notes={noteParts.join(" \u00B7 ")} date="Today \u2014 Feb 28" />
+            <div className="view-enter">
+              <PlanCard intensity={intensity} focus={FOCUS_MAP[intensity]} notes={noteParts.join("\n")} date="Today \u2014 Feb 28" />
 
               <div style={{ ...cardStyle, marginTop: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 12 }}>Session Status</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 14 }}>How'd it go?</div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  {["accepted", "completed", "skipped"].map(s => (
-                    <button key={s} onClick={() => setPlanStatus(s)} style={{
-                      flex: 1, padding: "11px 0", borderRadius: 10,
-                      border: planStatus === s ? `2px solid #111827` : "1px solid #e5e7eb",
-                      background: planStatus === s ? "#111827" : "#f9fafb",
-                      color: planStatus === s ? "#fff" : "#374151",
-                      fontSize: 12, fontWeight: 600, textTransform: "capitalize", transition: "all 0.15s",
+                  {[
+                    { key: "completed", icon: "\u2713", label: "Done" },
+                    { key: "modified", icon: "\u270F\uFE0F", label: "Modified" },
+                    { key: "skipped", icon: "\u2014", label: "Skipped" },
+                  ].map(s => (
+                    <button key={s.key} onClick={() => setPlanStatus(s.key)} style={{
+                      flex: 1, padding: "14px 0", borderRadius: 12,
+                      border: planStatus === s.key ? `2px solid ${s.key === "completed" ? "var(--green)" : s.key === "skipped" ? "var(--red)" : "var(--amber)"}` : "1.5px solid var(--card-border)",
+                      background: planStatus === s.key ? (s.key === "completed" ? "#22c55e15" : s.key === "skipped" ? "#ef444415" : "#f59e0b15") : "var(--surface-alt)",
+                      color: planStatus === s.key ? "var(--text-primary)" : "var(--text-secondary)",
+                      fontSize: 13, fontWeight: 600, transition: "all 0.2s",
                     }}>
-                      {s === "completed" ? "\u2713 " : s === "skipped" ? "\u2014 " : ""}{s}
+                      <div style={{ fontSize: 18, marginBottom: 4 }}>{s.icon}</div>
+                      {s.label}
                     </button>
                   ))}
                 </div>
-                {planStatus && (
-                  <div style={{ marginTop: 12, fontSize: 12, color: "#6b7280", background: "#f9fafb", borderRadius: 8, padding: 10 }}>
-                    <code style={{ fontSize: 11 }}>PATCH /plan/{"{user_id}"}/2026-02-28/status &rarr; "{planStatus}"</code>
-                  </div>
-                )}
               </div>
 
-              <div style={{ ...cardStyle, marginTop: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 10 }}>How this was generated</div>
-                <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.7 }}>
-                  Your readiness score of <strong style={{ color: "#111827" }}>{Math.round(score)}</strong> was computed from 5 subjective inputs + 3 biometric readings.
-                  Combined with a <strong style={{ color: "#111827" }}>{trend}</strong> trend over the last 7 check-ins, the system set <strong style={{ color: INTENSITY_CONFIG[intensity].color }}>{INTENSITY_CONFIG[intensity].label}</strong> intensity.
-                </div>
-                <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div style={cardStyle}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12 }}>Score Breakdown</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {[
-                    { label: "Stress", val: stress, inv: true },
-                    { label: "Sleep Q", val: sleepQuality },
-                    { label: "Soreness", val: soreness, inv: true },
-                    { label: "Energy", val: energy },
-                    { label: "Motivation", val: motivation },
-                  ].map(m => (
-                    <div key={m.label} style={{ background: "#f3f4f6", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 600 }}>
-                      {m.label}: <span style={{ color: m.inv ? (m.val >= 7 ? "#ef4444" : "#22c55e") : (m.val >= 7 ? "#22c55e" : "#ef4444") }}>{m.val}/10</span>
-                    </div>
-                  ))}
+                    { label: "Stress", val: stress, inv: true, icon: "\u{1F9E0}" },
+                    { label: "Sleep", val: sleepQuality, icon: "\u{1F303}" },
+                    { label: "Soreness", val: soreness, inv: true, icon: "\u{1FA79}" },
+                    { label: "Energy", val: energy, icon: "\u{1F50B}" },
+                    { label: "Drive", val: motivation, icon: "\u{1F4AA}" },
+                  ].map(m => {
+                    const good = m.inv ? m.val <= 4 : m.val >= 7;
+                    const bad = m.inv ? m.val >= 7 : m.val <= 4;
+                    const color = good ? "var(--green)" : bad ? "var(--red)" : "var(--amber)";
+                    return (
+                      <div key={m.label} style={{
+                        background: "var(--surface)", borderRadius: 10, padding: "8px 14px",
+                        fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6,
+                        border: `1px solid var(--card-border)`,
+                      }}>
+                        <span>{m.icon}</span>
+                        <span style={{ color: "var(--text-secondary)" }}>{m.label}</span>
+                        <span style={{ color, fontWeight: 700, marginLeft: 2 }}>{m.val}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ marginTop: 14, fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                  Readiness <strong style={{ color: "var(--text-primary)" }}>{Math.round(score)}/100</strong> with a <strong style={{ color: "var(--text-primary)" }}>{trend}</strong> trend over 7 days.
                 </div>
               </div>
             </div>
@@ -377,43 +692,42 @@
 
           {/* ── HISTORY VIEW ── */}
           {view === "history" && (
-            <div>
+            <div className="view-enter">
+              {/* Stats row */}
+              <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                <StatCard
+                  value={Math.round(MOCK_HISTORY.reduce((a,b) => a+b.score, 0) / MOCK_HISTORY.length)}
+                  label="Avg Score"
+                  color={(() => { const avg = MOCK_HISTORY.reduce((a,b) => a+b.score, 0) / MOCK_HISTORY.length; return avg >= 70 ? "var(--green)" : avg >= 45 ? "var(--amber)" : "var(--red)"; })()}
+                />
+                <StatCard value={`${MOCK_HISTORY.filter(d => d.status === "completed").length}/${MOCK_HISTORY.length}`} label="Completed" color="var(--green)" />
+                <StatCard value={MOCK_HISTORY.filter(d => d.status === "skipped").length} label="Skipped" color="var(--red)" />
+              </div>
+
               <div style={cardStyle}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "#374151" }}>Last 7 Days</div>
-                  <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                    Trend: <strong style={{ color: trend === "improving" ? "#22c55e" : trend === "declining" ? "#ef4444" : "#f59e0b" }}>{trend}</strong>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>7-Day Trend</div>
+                  <div style={{
+                    fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 8,
+                    color: trend === "improving" ? "var(--green)" : trend === "declining" ? "var(--red)" : "var(--amber)",
+                    background: "var(--surface)",
+                  }}>
+                    {trend === "improving" ? "\u2197\uFE0F" : trend === "declining" ? "\u2198\uFE0F" : "\u2194\uFE0F"} {trend}
                   </div>
                 </div>
                 <MiniBar history={MOCK_HISTORY} />
               </div>
 
               <div style={cardStyle}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#374151", marginBottom: 12 }}>Session Log</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Session Log</div>
                 {MOCK_HISTORY.map((d, i) => <HistoryRow key={i} day={d} />)}
-              </div>
-
-              <div style={{ ...cardStyle, background: "#f9fafb" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 10 }}>7-Day Summary</div>
-                <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                  {[
-                    { label: "Avg Readiness", value: Math.round(MOCK_HISTORY.reduce((a,b) => a+b.score, 0) / MOCK_HISTORY.length) },
-                    { label: "Completed", value: `${MOCK_HISTORY.filter(d => d.status === "completed").length}/${MOCK_HISTORY.length}` },
-                    { label: "Skipped", value: MOCK_HISTORY.filter(d => d.status === "skipped").length },
-                  ].map(s => (
-                    <div key={s.label} style={{ flex: 1, minWidth: 100, textAlign: "center" }}>
-                      <div style={{ fontSize: 26, fontWeight: 800, color: "#111827" }}>{s.value}</div>
-                      <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500, marginTop: 2 }}>{s.label}</div>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           )}
 
           {/* Footer */}
-          <div style={{ textAlign: "center", marginTop: 32, paddingBottom: 16, fontSize: 11, color: "#d1d5db" }}>
-            FastAPI + PostgreSQL &middot; Railway Deploy &middot; GitHub CI/CD
+          <div style={{ textAlign: "center", marginTop: 36, paddingBottom: 20, fontSize: 11, color: "var(--text-muted)", opacity: 0.5 }}>
+            Training Loop v1.0
           </div>
         </div>
       );
