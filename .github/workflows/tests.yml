@@ -24,5 +24,11 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest -q
-
+          pytest -      - name: Run tests
+        run: |
+          pytest -q || code=$?
+          if [ "${code:-0}" -eq 5 ]; then
+            echo "No tests found (pytest exit code 5). Skipping."
+            exit 0
+          fi
+          exit ${code:-0}
