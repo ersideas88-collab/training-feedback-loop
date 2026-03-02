@@ -146,7 +146,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 
   <script type="text/babel">
-    const { useState, useMemo, useEffect, useRef, useCallback } = React;
+    const { useState, useMemo, useEffect, useRef } = React;
 
     // ── Config ──────────────────────────────────────────────
     const INTENSITY_CONFIG = {
@@ -184,9 +184,9 @@
         raw += w < 0 ? Math.abs(w) * (11 - val) : w * val;
       }
       let score = (raw / 10) * 100;
-      if (data.hrv) { score += data.hrv >= 60 ? 5 : data.hrv < 30 ? -10 : 0; }
-      if (data.rhr) { score += data.rhr > 80 ? -5 : data.rhr < 55 ? 3 : 0; }
-      if (data.sleepHours) { score += data.sleepHours < 6 ? -10 : data.sleepHours >= 8 ? 5 : 0; }
+      if (data.hrv !== "" && data.hrv != null) { score += data.hrv >= 60 ? 5 : data.hrv < 30 ? -10 : 0; }
+      if (data.rhr !== "" && data.rhr != null) { score += data.rhr > 80 ? -5 : data.rhr < 55 ? 3 : 0; }
+      if (data.sleepHours !== "" && data.sleepHours != null) { score += data.sleepHours < 6 ? -10 : data.sleepHours >= 8 ? 5 : 0; }
       return Math.max(0, Math.min(100, score));
     }
 
@@ -331,13 +331,22 @@
 
     function PlanCard({ intensity, focus, notes, date, isResult }) {
       const cfg = INTENSITY_CONFIG[intensity];
-      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const [isDark, setIsDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+      useEffect(() => {
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        const handler = (e) => setIsDark(e.matches);
+        mq.addEventListener("change", handler);
+        return () => mq.removeEventListener("change", handler);
+      }, []);
+
       const bgColor = isDark ? cfg.darkBg : cfg.bg;
+      const notesList = typeof notes === "string" ? notes.split("\n").filter(Boolean) : [];
 
       return (
         <div style={{
           background: bgColor, border: `2px solid ${cfg.color}40`, borderRadius: 20, padding: 24,
-          boxShadow: `0 4px 24px ${cfg.color}15`,
+          boxShadow: `0 4px 24px ${cfg.color}1a`,
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
             <div>
@@ -351,7 +360,7 @@
               background: cfg.color, color: "#fff",
               padding: "8px 20px", borderRadius: 24,
               fontWeight: 700, fontSize: 14,
-              boxShadow: `0 4px 12px ${cfg.color}40`,
+              boxShadow: `0 4px 12px ${cfg.color}66`,
             }}>
               <span style={{ fontSize: 18 }}>{cfg.emoji}</span>
               <div>
@@ -361,14 +370,15 @@
             </div>
           </div>
           <div style={{ fontSize: 19, fontWeight: 700, color: "var(--text-primary)", marginBottom: 10, lineHeight: 1.3 }}>{focus}</div>
-          {notes && (
+          {notesList.length > 0 && (
             <div style={{
               fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.7,
               background: isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.7)",
               borderRadius: 12, padding: 16, marginTop: 8,
               backdropFilter: "blur(8px)",
+              display: "flex", flexDirection: "column", gap: 6,
             }}>
-              {notes}
+              {notesList.map((note, i) => <div key={i}>{note}</div>)}
             </div>
           )}
         </div>
@@ -407,21 +417,11 @@
           <div style={{
             width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 14, fontWeight: 700,
-            background: day.status === "completed" ? "#22c55e15" : "var(--surface)",
+            background: day.status === "completed" ? "rgba(34,197,94,0.1)" : "var(--surface)",
             color: day.status === "completed" ? "var(--green)" : "var(--text-muted)",
           }}>
             {day.status === "completed" ? "\u2713" : day.status === "skipped" ? "\u2014" : "\u00B7"}
           </div>
-        </div>
-      );
-    }
-
-    function EmptyState({ icon, title, subtitle }) {
-      return (
-        <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--text-muted)" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>{icon}</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 4 }}>{title}</div>
-          <div style={{ fontSize: 13 }}>{subtitle}</div>
         </div>
       );
     }
@@ -618,7 +618,7 @@
                   flex: 1, padding: "14px 0", borderRadius: 12, border: "1.5px solid var(--card-border)",
                   background: "var(--card)", color: "var(--text-secondary)", fontSize: 14, fontWeight: 600,
                 }}>
-                  \u2190 Edit
+                  {"\u2190"} Edit
                 </button>
                 <button onClick={handleReset} style={{
                   flex: 1, padding: "14px 0", borderRadius: 12, border: "none",
@@ -646,7 +646,7 @@
                     <button key={s.key} onClick={() => setPlanStatus(s.key)} style={{
                       flex: 1, padding: "14px 0", borderRadius: 12,
                       border: planStatus === s.key ? `2px solid ${s.key === "completed" ? "var(--green)" : s.key === "skipped" ? "var(--red)" : "var(--amber)"}` : "1.5px solid var(--card-border)",
-                      background: planStatus === s.key ? (s.key === "completed" ? "#22c55e15" : s.key === "skipped" ? "#ef444415" : "#f59e0b15") : "var(--surface-alt)",
+                      background: planStatus === s.key ? (s.key === "completed" ? "rgba(34,197,94,0.1)" : s.key === "skipped" ? "rgba(239,68,68,0.1)" : "rgba(245,158,11,0.1)") : "var(--surface-alt)",
                       color: planStatus === s.key ? "var(--text-primary)" : "var(--text-secondary)",
                       fontSize: 13, fontWeight: 600, transition: "all 0.2s",
                     }}>
