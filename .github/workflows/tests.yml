@@ -10,9 +10,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -24,11 +26,12 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest -      - name: Run tests
-        run: |
-          pytest -q || code=$?
-          if [ "${code:-0}" -eq 5 ]; then
-            echo "No tests found (pytest exit code 5). Skipping."
+          set +e
+          pytest -q
+          code=$?
+          if [ "$code" -eq 5 ]; then
+            echo "No tests found. Treating as success."
             exit 0
           fi
-          exit ${code:-0}
+          exit $code
+
