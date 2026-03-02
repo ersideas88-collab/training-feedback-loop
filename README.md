@@ -48,3 +48,4 @@ cd backend
 pip install -r requirements.txt
 DATABASE_URL=postgresql+asyncpg://localhost/training uvicorn main:app --reload
 ```
+# test
