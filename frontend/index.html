@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>Training Loop</title>
+  <title>Pressure Conditioned Language System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -526,6 +526,12 @@
       const currentValue = currentQuestion ? (answers[currentQuestion.field] ?? "") : "";
       const canGoBack = history.length > 1;
       const canContinue = !currentQuestion || currentQuestion.type === "text" ? true : currentValue !== "";
+      const [history, setHistory] = useState(["q1"]);
+      const currentQuestionId = history[history.length - 1];
+      const currentQuestion = CHECKIN_QUESTIONS[currentQuestionId];
+      const currentValue = answers[currentQuestion.field] ?? "";
+      const canGoBack = history.length > 1;
+      const canContinue = currentQuestion.type === "text" ? true : currentValue !== "";
 
       const getNextQuestionId = (questionId, nextAnswers) => {
         if (questionId === "q1") return nextAnswers.q1_phrase_recalled === "yes" ? "q2" : "q6";
@@ -563,6 +569,7 @@
             [field]: value,
           };
           const nextQuestionId = getNextQuestionId(currentStepId, nextAnswers);
+          const nextQuestionId = getNextQuestionId(currentQuestionId, nextAnswers);
           if (!nextQuestionId) return prev;
           return [...prev, nextQuestionId];
         });
@@ -583,6 +590,12 @@
           const currentField = currentQuestion.field;
           setAnswers(prev => ({ ...prev, [currentField]: null, timestamp: null }));
         }
+      const handleBack = () => {
+        if (!canGoBack) return;
+        const previousQuestionId = history[history.length - 2];
+        const currentField = currentQuestion.field;
+        const previousField = CHECKIN_QUESTIONS[previousQuestionId].field;
+        setAnswers(prev => ({ ...prev, [currentField]: null, [previousField]: prev[previousField], timestamp: null }));
         setHistory(prev => prev.slice(0, -1));
       };
 
@@ -598,6 +611,7 @@
           return;
         }
         const nextQuestionId = getNextQuestionId(currentStepId, answers);
+        const nextQuestionId = getNextQuestionId(currentQuestionId, answers);
         if (nextQuestionId) {
           setHistory(prev => [...prev, nextQuestionId]);
           return;
@@ -697,6 +711,11 @@
             )}
 
             {currentQuestion && currentQuestion.type === "choice" && (
+            <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.35, marginBottom: 20 }}>
+              {currentQuestion.prompt}
+            </div>
+
+            {currentQuestion.type === "choice" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {currentQuestion.options.map(option => (
                   <button
@@ -721,6 +740,7 @@
             )}
 
             {currentQuestion && currentQuestion.type === "text" && (
+            {currentQuestion.type === "text" && (
               <div>
                 <textarea
                   value={currentValue || ""}
@@ -756,6 +776,7 @@
                   }}
                 >
                   {currentStepId === "q7" ? "Save Check-In" : "Continue"}
+                  {currentQuestionId === "q7" ? "Save Check-In" : "Continue"}
                 </button>
               </div>
             )}
@@ -846,6 +867,12 @@
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: 28 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10, background: "var(--text-primary)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 18, color: "var(--bg)",
+              }}>
+              </div>
               <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>Pressure Conditioned Language System</span>
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>High-Stress Feedback System</div>
