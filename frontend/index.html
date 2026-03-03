@@ -436,8 +436,6 @@
     }
 
     const CHECKIN_INITIAL_DATA = {
-      user_name: "",
-      date: new Date(new Date().setHours(12, 0, 0, 0)).toISOString(),
       q1_phrase_recalled: null,
       q2_recall_mode: null,
       q3_timing: null,
@@ -519,13 +517,6 @@
 
     function CheckInFlow({ cardStyle, onSave }) {
       const [answers, setAnswers] = useState(CHECKIN_INITIAL_DATA);
-      const [history, setHistory] = useState(["metadata"]);
-      const [validation, setValidation] = useState({});
-      const currentStepId = history[history.length - 1];
-      const currentQuestion = currentStepId === "metadata" ? null : CHECKIN_QUESTIONS[currentStepId];
-      const currentValue = currentQuestion ? (answers[currentQuestion.field] ?? "") : "";
-      const canGoBack = history.length > 1;
-      const canContinue = !currentQuestion || currentQuestion.type === "text" ? true : currentValue !== "";
       const [history, setHistory] = useState(["q1"]);
       const currentQuestionId = history[history.length - 1];
       const currentQuestion = CHECKIN_QUESTIONS[currentQuestionId];
@@ -568,7 +559,6 @@
             ...answers,
             [field]: value,
           };
-          const nextQuestionId = getNextQuestionId(currentStepId, nextAnswers);
           const nextQuestionId = getNextQuestionId(currentQuestionId, nextAnswers);
           if (!nextQuestionId) return prev;
           return [...prev, nextQuestionId];
@@ -579,17 +569,6 @@
         setAnswers(prev => ({ ...prev, [field]: value, timestamp: null }));
       };
 
-      const handleMetadataChange = (field, value) => {
-        setAnswers(prev => ({ ...prev, [field]: value, timestamp: null }));
-        setValidation(prev => ({ ...prev, [field]: "" }));
-      };
-
-      const handleBack = () => {
-        if (!canGoBack) return;
-        if (currentStepId !== "metadata") {
-          const currentField = currentQuestion.field;
-          setAnswers(prev => ({ ...prev, [currentField]: null, timestamp: null }));
-        }
       const handleBack = () => {
         if (!canGoBack) return;
         const previousQuestionId = history[history.length - 2];
@@ -601,16 +580,6 @@
 
       const handleContinue = () => {
         if (!canContinue) return;
-        if (currentStepId === "metadata") {
-          const nextValidation = {};
-          if (!answers.user_name.trim()) nextValidation.user_name = "User Name is required.";
-          if (!answers.date) nextValidation.date = "Date is required.";
-          setValidation(nextValidation);
-          if (Object.keys(nextValidation).length > 0) return;
-          setHistory(prev => [...prev, "q1"]);
-          return;
-        }
-        const nextQuestionId = getNextQuestionId(currentStepId, answers);
         const nextQuestionId = getNextQuestionId(currentQuestionId, answers);
         if (nextQuestionId) {
           setHistory(prev => [...prev, nextQuestionId]);
@@ -625,92 +594,6 @@
             <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
               Check in
             </div>
-            {currentStepId === "metadata" && (
-              <div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.35, marginBottom: 20 }}>
-                  Enter your check-in details before starting.
-                </div>
-
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
-                    User Name
-                  </label>
-                  <input
-                    type="text"
-                    value={answers.user_name}
-                    onChange={e => handleMetadataChange("user_name", e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "12px 14px",
-                      borderRadius: 12,
-                      border: "1.5px solid var(--card-border)",
-                      background: "var(--surface-alt)",
-                      color: "var(--text-primary)",
-                      fontFamily: "inherit",
-                      fontSize: 15,
-                      outline: "none",
-                    }}
-                  />
-                  {validation.user_name && (
-                    <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>
-                      {validation.user_name}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={answers.date ? answers.date.slice(0, 10) : ""}
-                    onChange={e => handleMetadataChange("date", e.target.value ? new Date(`${e.target.value}T12:00:00`).toISOString() : "")}
-                    style={{
-                      width: "100%",
-                      padding: "12px 14px",
-                      borderRadius: 12,
-                      border: "1.5px solid var(--card-border)",
-                      background: "var(--surface-alt)",
-                      color: "var(--text-primary)",
-                      fontFamily: "inherit",
-                      fontSize: 15,
-                      outline: "none",
-                    }}
-                  />
-                  {validation.date && (
-                    <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>
-                      {validation.date}
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  onClick={handleContinue}
-                  style={{
-                    width: "100%",
-                    padding: 16,
-                    borderRadius: 14,
-                    border: "none",
-                    background: "var(--btn-primary-bg)",
-                    color: "var(--btn-primary-text)",
-                    fontSize: 15,
-                    fontWeight: 700,
-                    marginTop: 4,
-                  }}
-                >
-                  Continue
-                </button>
-              </div>
-            )}
-
-            {currentQuestion && (
-              <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.35, marginBottom: 20 }}>
-                {currentQuestion.prompt}
-              </div>
-            )}
-
-            {currentQuestion && currentQuestion.type === "choice" && (
             <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.35, marginBottom: 20 }}>
               {currentQuestion.prompt}
             </div>
@@ -739,7 +622,6 @@
               </div>
             )}
 
-            {currentQuestion && currentQuestion.type === "text" && (
             {currentQuestion.type === "text" && (
               <div>
                 <textarea
@@ -775,7 +657,6 @@
                     marginTop: 14,
                   }}
                 >
-                  {currentStepId === "q7" ? "Save Check-In" : "Continue"}
                   {currentQuestionId === "q7" ? "Save Check-In" : "Continue"}
                 </button>
               </div>
