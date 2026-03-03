@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Training Feedback Loop",
+    title="Pressure Conditioned Language System",
     version="1.0.0",
     lifespan=lifespan,
 )
