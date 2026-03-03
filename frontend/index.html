@@ -436,6 +436,8 @@
     }
 
     const CHECKIN_INITIAL_DATA = {
+      user_name: "",
+      date: new Date(new Date().setHours(12, 0, 0, 0)).toISOString(),
       q1_phrase_recalled: null,
       q2_recall_mode: null,
       q3_timing: null,
@@ -517,12 +519,13 @@
 
     function CheckInFlow({ cardStyle, onSave }) {
       const [answers, setAnswers] = useState(CHECKIN_INITIAL_DATA);
-      const [history, setHistory] = useState(["q1"]);
-      const currentQuestionId = history[history.length - 1];
-      const currentQuestion = CHECKIN_QUESTIONS[currentQuestionId];
-      const currentValue = answers[currentQuestion.field] ?? "";
+      const [history, setHistory] = useState(["metadata"]);
+      const [validation, setValidation] = useState({});
+      const currentStepId = history[history.length - 1];
+      const currentQuestion = currentStepId === "metadata" ? null : CHECKIN_QUESTIONS[currentStepId];
+      const currentValue = currentQuestion ? (answers[currentQuestion.field] ?? "") : "";
       const canGoBack = history.length > 1;
-      const canContinue = currentQuestion.type === "text" ? true : currentValue !== "";
+      const canContinue = !currentQuestion || currentQuestion.type === "text" ? true : currentValue !== "";
 
       const getNextQuestionId = (questionId, nextAnswers) => {
         if (questionId === "q1") return nextAnswers.q1_phrase_recalled === "yes" ? "q2" : "q6";
@@ -559,7 +562,7 @@
             ...answers,
             [field]: value,
           };
-          const nextQuestionId = getNextQuestionId(currentQuestionId, nextAnswers);
+          const nextQuestionId = getNextQuestionId(currentStepId, nextAnswers);
           if (!nextQuestionId) return prev;
           return [...prev, nextQuestionId];
         });
@@ -569,18 +572,32 @@
         setAnswers(prev => ({ ...prev, [field]: value, timestamp: null }));
       };
 
+      const handleMetadataChange = (field, value) => {
+        setAnswers(prev => ({ ...prev, [field]: value, timestamp: null }));
+        setValidation(prev => ({ ...prev, [field]: "" }));
+      };
+
       const handleBack = () => {
         if (!canGoBack) return;
-        const previousQuestionId = history[history.length - 2];
-        const currentField = currentQuestion.field;
-        const previousField = CHECKIN_QUESTIONS[previousQuestionId].field;
-        setAnswers(prev => ({ ...prev, [currentField]: null, [previousField]: prev[previousField], timestamp: null }));
+        if (currentStepId !== "metadata") {
+          const currentField = currentQuestion.field;
+          setAnswers(prev => ({ ...prev, [currentField]: null, timestamp: null }));
+        }
         setHistory(prev => prev.slice(0, -1));
       };
 
       const handleContinue = () => {
         if (!canContinue) return;
-        const nextQuestionId = getNextQuestionId(currentQuestionId, answers);
+        if (currentStepId === "metadata") {
+          const nextValidation = {};
+          if (!answers.user_name.trim()) nextValidation.user_name = "User Name is required.";
+          if (!answers.date) nextValidation.date = "Date is required.";
+          setValidation(nextValidation);
+          if (Object.keys(nextValidation).length > 0) return;
+          setHistory(prev => [...prev, "q1"]);
+          return;
+        }
+        const nextQuestionId = getNextQuestionId(currentStepId, answers);
         if (nextQuestionId) {
           setHistory(prev => [...prev, nextQuestionId]);
           return;
@@ -594,11 +611,92 @@
             <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
               Check in
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.35, marginBottom: 20 }}>
-              {currentQuestion.prompt}
-            </div>
+            {currentStepId === "metadata" && (
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.35, marginBottom: 20 }}>
+                  Enter your check-in details before starting.
+                </div>
 
-            {currentQuestion.type === "choice" && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+                    User Name
+                  </label>
+                  <input
+                    type="text"
+                    value={answers.user_name}
+                    onChange={e => handleMetadataChange("user_name", e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      border: "1.5px solid var(--card-border)",
+                      background: "var(--surface-alt)",
+                      color: "var(--text-primary)",
+                      fontFamily: "inherit",
+                      fontSize: 15,
+                      outline: "none",
+                    }}
+                  />
+                  {validation.user_name && (
+                    <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>
+                      {validation.user_name}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={answers.date ? answers.date.slice(0, 10) : ""}
+                    onChange={e => handleMetadataChange("date", e.target.value ? new Date(`${e.target.value}T12:00:00`).toISOString() : "")}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      border: "1.5px solid var(--card-border)",
+                      background: "var(--surface-alt)",
+                      color: "var(--text-primary)",
+                      fontFamily: "inherit",
+                      fontSize: 15,
+                      outline: "none",
+                    }}
+                  />
+                  {validation.date && (
+                    <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>
+                      {validation.date}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleContinue}
+                  style={{
+                    width: "100%",
+                    padding: 16,
+                    borderRadius: 14,
+                    border: "none",
+                    background: "var(--btn-primary-bg)",
+                    color: "var(--btn-primary-text)",
+                    fontSize: 15,
+                    fontWeight: 700,
+                    marginTop: 4,
+                  }}
+                >
+                  Continue
+                </button>
+              </div>
+            )}
+
+            {currentQuestion && (
+              <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.35, marginBottom: 20 }}>
+                {currentQuestion.prompt}
+              </div>
+            )}
+
+            {currentQuestion && currentQuestion.type === "choice" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {currentQuestion.options.map(option => (
                   <button
@@ -622,7 +720,7 @@
               </div>
             )}
 
-            {currentQuestion.type === "text" && (
+            {currentQuestion && currentQuestion.type === "text" && (
               <div>
                 <textarea
                   value={currentValue || ""}
@@ -657,7 +755,7 @@
                     marginTop: 14,
                   }}
                 >
-                  {currentQuestionId === "q7" ? "Save Check-In" : "Continue"}
+                  {currentStepId === "q7" ? "Save Check-In" : "Continue"}
                 </button>
               </div>
             )}
@@ -748,12 +846,6 @@
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: 28 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10, background: "var(--text-primary)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 18, color: "var(--bg)",
-              }}>
-              </div>
               <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>Pressure Conditioned Language System</span>
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>High-Stress Feedback System</div>
