@@ -435,12 +435,262 @@
       );
     }
 
+    const CHECKIN_INITIAL_DATA = {
+      q1_phrase_recalled: null,
+      q2_recall_mode: null,
+      q3_timing: null,
+      q4_effect: null,
+      q5_situation_text: null,
+      q6_attempted_recall: null,
+      q7_additional_text: null,
+      timestamp: null,
+    };
+
+    const CHECKIN_QUESTIONS = {
+      q1: {
+        id: "q1",
+        prompt: "Did the assigned phrase come to mind at any point today?",
+        type: "choice",
+        field: "q1_phrase_recalled",
+        options: [
+          { label: "Yes", value: "yes" },
+          { label: "No", value: "no" },
+        ],
+      },
+      q2: {
+        id: "q2",
+        prompt: "How did the phrase come to mind?",
+        type: "choice",
+        field: "q2_recall_mode",
+        options: [
+          { label: "Spontaneous", value: "spontaneous", help: "came to mind without effort" },
+          { label: "Deliberate", value: "deliberate", help: "I intentionally tried to recall it" },
+        ],
+      },
+      q3: {
+        id: "q3",
+        prompt: "When did the phrase come to mind?",
+        type: "choice",
+        field: "q3_timing",
+        options: [
+          { label: "Before", value: "before", help: "Before a pressure situation" },
+          { label: "During", value: "during", help: "During a pressure situation" },
+          { label: "After", value: "after", help: "After a pressure situation" },
+        ],
+      },
+      q4: {
+        id: "q4",
+        prompt: "What was the effect of the phrase, if any?",
+        type: "choice",
+        field: "q4_effect",
+        options: [
+          { label: "Helpful", value: "helpful" },
+          { label: "Neutral", value: "neutral" },
+          { label: "Distracting", value: "distracting" },
+        ],
+      },
+      q5: {
+        id: "q5",
+        prompt: "Briefly describe the situation in which the phrase came to mind (if applicable).",
+        type: "text",
+        field: "q5_situation_text",
+        placeholder: "Write a few words if relevant.",
+      },
+      q6: {
+        id: "q6",
+        prompt: "Did you notice any attempt to recall the phrase today?",
+        type: "choice",
+        field: "q6_attempted_recall",
+        options: [
+          { label: "Yes", value: "yes" },
+          { label: "No", value: "no" },
+        ],
+      },
+      q7: {
+        id: "q7",
+        prompt: "Any additional observations you want to record?",
+        type: "text",
+        field: "q7_additional_text",
+        placeholder: "Optional notes.",
+      },
+    };
+
+    function CheckInFlow({ cardStyle, onSave }) {
+      const [answers, setAnswers] = useState(CHECKIN_INITIAL_DATA);
+      const [history, setHistory] = useState(["q1"]);
+      const currentQuestionId = history[history.length - 1];
+      const currentQuestion = CHECKIN_QUESTIONS[currentQuestionId];
+      const currentValue = answers[currentQuestion.field] ?? "";
+      const canGoBack = history.length > 1;
+      const canContinue = currentQuestion.type === "text" ? true : currentValue !== "";
+
+      const getNextQuestionId = (questionId, nextAnswers) => {
+        if (questionId === "q1") return nextAnswers.q1_phrase_recalled === "yes" ? "q2" : "q6";
+        if (questionId === "q2") return "q3";
+        if (questionId === "q3") return "q4";
+        if (questionId === "q4") return "q5";
+        if (questionId === "q5") return "q7";
+        if (questionId === "q6") return "q7";
+        return null;
+      };
+
+      const handleChoice = (field, value) => {
+        setAnswers(prev => {
+          const next = {
+            ...prev,
+            [field]: value,
+            timestamp: null,
+          };
+
+          if (field === "q1_phrase_recalled") {
+            next.q2_recall_mode = null;
+            next.q3_timing = null;
+            next.q4_effect = null;
+            next.q5_situation_text = null;
+            next.q6_attempted_recall = null;
+            next.q7_additional_text = null;
+          }
+
+          return next;
+        });
+
+        setHistory(prev => {
+          const nextAnswers = {
+            ...answers,
+            [field]: value,
+          };
+          const nextQuestionId = getNextQuestionId(currentQuestionId, nextAnswers);
+          if (!nextQuestionId) return prev;
+          return [...prev, nextQuestionId];
+        });
+      };
+
+      const handleTextChange = (field, value) => {
+        setAnswers(prev => ({ ...prev, [field]: value, timestamp: null }));
+      };
+
+      const handleBack = () => {
+        if (!canGoBack) return;
+        const previousQuestionId = history[history.length - 2];
+        const currentField = currentQuestion.field;
+        const previousField = CHECKIN_QUESTIONS[previousQuestionId].field;
+        setAnswers(prev => ({ ...prev, [currentField]: null, [previousField]: prev[previousField], timestamp: null }));
+        setHistory(prev => prev.slice(0, -1));
+      };
+
+      const handleContinue = () => {
+        if (!canContinue) return;
+        const nextQuestionId = getNextQuestionId(currentQuestionId, answers);
+        if (nextQuestionId) {
+          setHistory(prev => [...prev, nextQuestionId]);
+          return;
+        }
+        onSave({ ...answers, timestamp: new Date().toISOString() });
+      };
+
+      return (
+        <div className="view-enter">
+          <div style={cardStyle}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
+              Check in
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.35, marginBottom: 20 }}>
+              {currentQuestion.prompt}
+            </div>
+
+            {currentQuestion.type === "choice" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {currentQuestion.options.map(option => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleChoice(currentQuestion.field, option.value)}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "16px 18px",
+                      borderRadius: 14,
+                      border: currentValue === option.value ? "2px solid var(--text-primary)" : "1.5px solid var(--card-border)",
+                      background: currentValue === option.value ? "var(--surface)" : "var(--card)",
+                      color: "var(--text-primary)",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{option.label}</div>
+                    {option.help && <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>{option.help}</div>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {currentQuestion.type === "text" && (
+              <div>
+                <textarea
+                  value={currentValue || ""}
+                  onChange={e => handleTextChange(currentQuestion.field, e.target.value)}
+                  placeholder={currentQuestion.placeholder}
+                  rows={6}
+                  style={{
+                    width: "100%",
+                    resize: "vertical",
+                    padding: 14,
+                    borderRadius: 14,
+                    border: "1.5px solid var(--card-border)",
+                    background: "var(--surface-alt)",
+                    color: "var(--text-primary)",
+                    fontFamily: "inherit",
+                    fontSize: 15,
+                    lineHeight: 1.5,
+                    outline: "none",
+                  }}
+                />
+                <button
+                  onClick={handleContinue}
+                  style={{
+                    width: "100%",
+                    padding: 16,
+                    borderRadius: 14,
+                    border: "none",
+                    background: "var(--btn-primary-bg)",
+                    color: "var(--btn-primary-text)",
+                    fontSize: 15,
+                    fontWeight: 700,
+                    marginTop: 14,
+                  }}
+                >
+                  {currentQuestionId === "q7" ? "Save Check-In" : "Continue"}
+                </button>
+              </div>
+            )}
+
+            {canGoBack && (
+              <button
+                onClick={handleBack}
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1.5px solid var(--card-border)",
+                  background: "transparent",
+                  color: "var(--text-secondary)",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  marginTop: 12,
+                }}
+              >
+                Back
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     // ── App ─────────────────────────────────────────────────
     function App() {
       const [view, setView] = useState("checkin");
       const [submitted, setSubmitted] = useState(false);
+      const [checkInRecord, setCheckInRecord] = useState(null);
       const [planStatus, setPlanStatus] = useState(null);
-      const [confirming, setConfirming] = useState(false);
       const tabRefs = useRef({});
 
       const [stress, setStress] = useState(5);
@@ -462,16 +712,16 @@
       if (trend === "declining") noteParts.push("\u{1F4C9} Declining trend \u2014 consider a scheduled deload");
       if (noteParts.length === 0) noteParts.push("All systems looking good. Train with confidence.");
 
-      const handleSubmit = () => {
-        if (!confirming) { setConfirming(true); return; }
+      const handleCheckInSave = (record) => {
+        setCheckInRecord(record);
         setSubmitted(true);
-        setConfirming(false);
       };
 
       const handleReset = () => {
         setStress(5); setSleepQuality(6); setSoreness(4); setEnergy(6); setMotivation(7);
         setHrv(""); setRhr(""); setSleepHours("");
-        setSubmitted(false); setConfirming(false);
+        setCheckInRecord(null);
+        setSubmitted(false);
       };
 
       const tabs = [
@@ -515,7 +765,7 @@
             <div className="tab-indicator" style={indicatorStyle} />
             {tabs.map(t => (
               <button key={t.id} ref={el => tabRefs.current[t.id] = el}
-                onClick={() => { setView(t.id); if (t.id === "checkin") setSubmitted(false); }}
+                onClick={() => setView(t.id)}
                 style={{
                   padding: "12px 0", borderRadius: 10, border: "none", flex: 1,
                   fontWeight: 600, fontSize: 13, position: "relative", zIndex: 1,
@@ -531,65 +781,7 @@
 
           {/* ── CHECK-IN VIEW ── */}
           {view === "checkin" && !submitted && (
-            <div className="view-enter">
-              <div style={cardStyle}>
-                <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "var(--text-primary)" }}>How are you feeling?</div>
-                <Slider label="Stress" value={stress} onChange={setStress} inverted icon="\u{1F9E0}" />
-                <Slider label="Sleep Quality" value={sleepQuality} onChange={setSleepQuality} icon="\u{1F303}" />
-                <Slider label="Soreness" value={soreness} onChange={setSoreness} inverted icon="\u{1FA79}" />
-                <Slider label="Energy" value={energy} onChange={setEnergy} icon="\u{1F50B}" />
-                <Slider label="Motivation" value={motivation} onChange={setMotivation} icon="\u{1F4AA}" />
-              </div>
-
-              <div style={cardStyle}>
-                <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: "var(--text-primary)" }}>
-                  Biometrics <span style={{ fontWeight: 400, color: "var(--text-muted)", fontSize: 12, marginLeft: 4 }}>optional</span>
-                </div>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <BiometricInput label="HRV" unit="ms" value={hrv} onChange={setHrv} placeholder="55" min={0} max={300} icon="\u2764\uFE0F" />
-                  <BiometricInput label="Resting HR" unit="bpm" value={rhr} onChange={setRhr} placeholder="60" min={30} max={200} icon="\u{1FA93}" />
-                  <BiometricInput label="Sleep" unit="hrs" value={sleepHours} onChange={setSleepHours} placeholder="7.5" min={0} max={24} icon="\u{1F634}" />
-                </div>
-              </div>
-
-              {/* Live readiness — sticky feel */}
-              <div style={{
-                ...cardStyle, background: "var(--surface-alt)", textAlign: "center",
-                position: "sticky", bottom: 80, zIndex: 5,
-                boxShadow: "0 -4px 20px rgba(0,0,0,0.06)",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
-                  <ScoreRing score={score} size={90} />
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1 }}>Tomorrow</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: INTENSITY_CONFIG[intensity].color, marginTop: 2 }}>
-                      {INTENSITY_CONFIG[intensity].emoji} {INTENSITY_CONFIG[intensity].label}
-                    </div>
-                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>{INTENSITY_CONFIG[intensity].desc}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Submit button with confirmation */}
-              <button onClick={handleSubmit} style={{
-                width: "100%", padding: 18, borderRadius: 14, border: "none",
-                background: confirming ? "var(--green)" : "var(--btn-primary-bg)",
-                color: confirming ? "#fff" : "var(--btn-primary-text)",
-                fontSize: 16, fontWeight: 700, transition: "all 0.2s", marginTop: 4,
-                boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
-              }}>
-                {confirming ? "Tap again to confirm \u2713" : "Submit Check-In \u2192"}
-              </button>
-
-              {confirming && (
-                <button onClick={() => setConfirming(false)} style={{
-                  width: "100%", padding: 12, borderRadius: 10, border: "none",
-                  background: "transparent", color: "var(--text-muted)", fontSize: 13, fontWeight: 500, marginTop: 8,
-                }}>
-                  Cancel
-                </button>
-              )}
-            </div>
+            <CheckInFlow cardStyle={cardStyle} onSave={handleCheckInSave} />
           )}
 
           {/* ── POST-SUBMIT ── */}
@@ -603,15 +795,8 @@
                 }}>
                   <span style={{ color: "#fff", fontSize: 32, fontWeight: 700 }}>{"\u2713"}</span>
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)" }}>You're locked in</div>
-                <div style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 6 }}>Check-in recorded \u00B7 Tomorrow's plan is ready</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)" }}>Check-in saved.</div>
               </div>
-
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
-                <ScoreRing score={score} size={150} animated={false} />
-              </div>
-
-              <PlanCard intensity={intensity} focus={FOCUS_MAP[intensity]} notes={noteParts.join("\n")} date="March 1, 2026" isResult />
 
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                 <button onClick={() => setSubmitted(false)} style={{
