@@ -436,8 +436,8 @@
     }
 
     const CHECKIN_INITIAL_DATA = {
-      user_name: "",
-      date: new Date().toISOString().slice(0, 10),
+      user_id: "",
+      date_of_entry: new Date().toISOString().slice(0, 10),
       q1_phrase_recalled: null,
       q2_recall_mode: null,
       q3_timing: null,
@@ -591,8 +591,8 @@
         if (!canContinue) return;
         if (currentQuestionId === "metadata") {
           const nextValidation = {};
-          if (!answers.user_name.trim()) nextValidation.user_name = "User Name is required.";
-          if (!answers.date) nextValidation.date = "Date is required.";
+          if (!answers.user_id.trim()) nextValidation.user_id = "User ID is required.";
+          if (!answers.date_of_entry) nextValidation.date_of_entry = "Date of Entry is required.";
           setValidation(nextValidation);
           if (Object.keys(nextValidation).length > 0) return;
           setHistory(prev => [...prev, "q1"]);
@@ -621,12 +621,12 @@
 
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
-                    User Name
+                    User ID
                   </label>
                   <input
                     type="text"
-                    value={answers.user_name}
-                    onChange={e => handleMetadataChange("user_name", e.target.value)}
+                    value={answers.user_id}
+                    onChange={e => handleMetadataChange("user_id", e.target.value)}
                     style={{
                       width: "100%",
                       padding: "12px 14px",
@@ -639,17 +639,17 @@
                       outline: "none",
                     }}
                   />
-                  {validation.user_name && <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>{validation.user_name}</div>}
+                  {validation.user_id && <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>{validation.user_id}</div>}
                 </div>
 
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
-                    Date
+                    Date of Entry
                   </label>
                   <input
                     type="date"
-                    value={answers.date}
-                    onChange={e => handleMetadataChange("date", e.target.value)}
+                    value={answers.date_of_entry}
+                    onChange={e => handleMetadataChange("date_of_entry", e.target.value)}
                     style={{
                       width: "100%",
                       padding: "12px 14px",
@@ -662,7 +662,7 @@
                       outline: "none",
                     }}
                   />
-                  {validation.date && <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>{validation.date}</div>}
+                  {validation.date_of_entry && <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>{validation.date_of_entry}</div>}
                 </div>
 
                 <button
