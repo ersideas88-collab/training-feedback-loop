@@ -175,6 +175,16 @@
       peak: "Max effort / testing day",
     };
 
+    const API_BASE = (() => {
+      const fromWindow = typeof window !== "undefined" ? window.__PCLS_API_BASE__ : "";
+      const fromStorage = typeof window !== "undefined" ? window.localStorage.getItem("PCLS_API_BASE") : "";
+      return (fromWindow || fromStorage || "").replace(/\/$/, "");
+    })();
+
+    function apiUrl(path) {
+      return API_BASE ? `${API_BASE}${path}` : path;
+    }
+
     // ── Logic ───────────────────────────────────────────────
     function computeReadiness(data) {
       const weights = { stress: -0.20, sleepQuality: 0.25, soreness: -0.15, energy: 0.25, motivation: 0.15 };
@@ -521,6 +531,8 @@
       const [answers, setAnswers] = useState(CHECKIN_INITIAL_DATA);
       const [history, setHistory] = useState(["metadata"]);
       const [validation, setValidation] = useState({});
+      const [submitting, setSubmitting] = useState(false);
+      const [submitError, setSubmitError] = useState("");
       const currentQuestionId = history[history.length - 1];
       const currentQuestion = currentQuestionId === "metadata" ? null : CHECKIN_QUESTIONS[currentQuestionId];
       const currentValue = currentQuestion ? (answers[currentQuestion.field] ?? "") : "";
@@ -608,6 +620,7 @@
       };
 
       const handleContinue = () => {
+        if (submitting) return;
         if (!canContinue) return;
         if (currentQuestionId === "metadata") {
           const nextValidation = {};
@@ -623,7 +636,15 @@
           setHistory(prev => [...prev, nextQuestionId]);
           return;
         }
-        onSave({ ...answers, timestamp: new Date().toISOString() });
+        const record = { ...answers, timestamp: new Date().toISOString() };
+        setSubmitError("");
+        setSubmitting(true);
+        Promise.resolve(onSave(record))
+          .catch((err) => {
+            const message = err?.message || "Could not save check-in. Try again.";
+            setSubmitError(message);
+          })
+          .finally(() => setSubmitting(false));
       };
 
       return (
@@ -788,20 +809,22 @@
                 />
                 <button
                   onClick={handleContinue}
+                  disabled={submitting}
                   style={{
                     width: "100%",
                     padding: 16,
                     borderRadius: 14,
                     border: "none",
-                    background: "var(--btn-primary-bg)",
-                    color: "var(--btn-primary-text)",
+                    background: submitting ? "var(--card-border)" : "var(--btn-primary-bg)",
+                    color: submitting ? "var(--text-muted)" : "var(--btn-primary-text)",
                     fontSize: 15,
                     fontWeight: 700,
                     marginTop: 14,
                   }}
                 >
-                  {currentQuestionId === "q7" ? "Save Check-In" : "Continue"}
+                  {submitting ? "Saving..." : (currentQuestionId === "q7" ? "Save Check-In" : "Continue")}
                 </button>
+                {submitError && <div style={{ fontSize: 12, color: "var(--red)", marginTop: 8 }}>{submitError}</div>}
               </div>
             )}
 
@@ -854,8 +877,37 @@
       if (trend === "declining") noteParts.push("\u{1F4C9} Declining trend \u2014 consider a scheduled deload");
       if (noteParts.length === 0) noteParts.push("All systems looking good. Train with confidence.");
 
-      const handleCheckInSave = (record) => {
-        setCheckInRecord(record);
+      const handleCheckInSave = async (record) => {
+        const payload = {
+          participant_id: record.user_id,
+          date_of_entry: record.date_of_entry,
+          q1_phrase_recalled: record.q1_phrase_recalled,
+          q2_recall_mode: record.q2_recall_mode,
+          q3_timing: record.q3_timing,
+          q4_effect: record.q4_effect,
+          q5_situation_text: record.q5_situation_text,
+          q6_attempted_recall: record.q6_attempted_recall,
+          q7_additional_text: record.q7_additional_text,
+          timestamp: record.timestamp,
+        };
+
+        const res = await fetch(apiUrl("/phrase-checkin"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          let message = "Failed to save check-in.";
+          try {
+            const body = await res.json();
+            if (body?.detail) message = String(body.detail);
+          } catch (_) {}
+          throw new Error(message);
+        }
+
+        const saved = await res.json();
+        setCheckInRecord(saved);
         setSubmitted(true);
       };
 

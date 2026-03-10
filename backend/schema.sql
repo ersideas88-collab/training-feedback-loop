@@ -61,3 +61,26 @@ CREATE TABLE IF NOT EXISTS session_plans (
 CREATE INDEX idx_check_ins_user_date ON check_ins(user_id, date DESC);
 CREATE INDEX idx_session_plans_user_date ON session_plans(user_id, date DESC);
 CREATE INDEX idx_session_plans_status ON session_plans(status);
+
+-- Phrase check-ins: one-question-at-a-time language recall flow
+CREATE TABLE IF NOT EXISTS phrase_check_ins (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id             UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    date_of_entry       DATE NOT NULL,
+
+    q1_phrase_recalled  VARCHAR(8) NOT NULL,      -- yes | no
+    q2_recall_mode      VARCHAR(20),              -- spontaneous | deliberate
+    q3_timing           VARCHAR(10),              -- before | during | after
+    q4_effect           VARCHAR(20),              -- helpful | neutral | distracting
+    q5_situation_text   TEXT,
+    q6_attempted_recall VARCHAR(8),               -- yes | no
+    q7_additional_text  TEXT,
+    timestamp           TIMESTAMPTZ,
+
+    created_at          TIMESTAMPTZ DEFAULT now(),
+    updated_at          TIMESTAMPTZ DEFAULT now(),
+
+    UNIQUE(user_id, date_of_entry)
+);
+
+CREATE INDEX idx_phrase_check_ins_user_date ON phrase_check_ins(user_id, date_of_entry DESC);

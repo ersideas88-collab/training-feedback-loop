@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import (
-    Column, Date, ForeignKey, Index, Numeric, SmallInteger, String, Text,
+    Column, Date, DateTime, ForeignKey, Index, Numeric, SmallInteger, String, Text,
     UniqueConstraint, CheckConstraint, func
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
@@ -32,6 +32,7 @@ class UserRow(Base):
 
     check_ins = relationship("CheckInRow", back_populates="user")
     session_plans = relationship("SessionPlanRow", back_populates="user")
+    phrase_check_ins = relationship("PhraseCheckInRow", back_populates="user")
 
 
 class CheckInRow(Base):
@@ -89,6 +90,31 @@ class SessionPlanRow(Base):
     check_in = relationship("CheckInRow", back_populates="session_plan")
 
 
+class PhraseCheckInRow(Base):
+    __tablename__ = "phrase_check_ins"
+    __table_args__ = (
+        UniqueConstraint("user_id", "date_of_entry"),
+    )
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    date_of_entry = Column(Date, nullable=False)
+
+    q1_phrase_recalled = Column(String(8), nullable=False)
+    q2_recall_mode = Column(String(20), nullable=True)
+    q3_timing = Column(String(10), nullable=True)
+    q4_effect = Column(String(20), nullable=True)
+    q5_situation_text = Column(Text, nullable=True)
+    q6_attempted_recall = Column(String(8), nullable=True)
+    q7_additional_text = Column(Text, nullable=True)
+    timestamp = Column(DateTime(timezone=True), nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("UserRow", back_populates="phrase_check_ins")
+
+
 # ── Pydantic Schemas (API layer) ──────────────────────────
 
 class Intensity(str, Enum):
@@ -138,3 +164,17 @@ class SessionPlanResponse(BaseModel):
 class CheckInWithPlanResponse(BaseModel):
     check_in: CheckInResponse
     session_plan: SessionPlanResponse
+
+
+class PhraseCheckInCreate(BaseModel):
+    participant_id: str = Field(min_length=1, max_length=100)
+    date_of_entry: date
+
+    q1_phrase_recalled: str
+    q2_recall_mode: Optional[str] = None
+    q3_timing: Optional[str] = None
+    q4_effect: Optional[str] = None
+    q5_situation_text: Optional[str] = None
+    q6_attempted_recall: Optional[str] = None
+    q7_additional_text: Optional[str] = None
+    timestamp: Optional[datetime] = None
