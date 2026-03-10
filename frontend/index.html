@@ -146,7 +146,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 
   <script type="text/babel">
-    const { useState, useMemo, useEffect, useRef } = React;
+    const { useState, useMemo, useEffect } = React;
 
     // ── Config ──────────────────────────────────────────────
     const INTENSITY_CONFIG = {
@@ -525,7 +525,22 @@
       const currentQuestion = currentQuestionId === "metadata" ? null : CHECKIN_QUESTIONS[currentQuestionId];
       const currentValue = currentQuestion ? (answers[currentQuestion.field] ?? "") : "";
       const canGoBack = history.length > 1;
+<<<<<<< HEAD
+      const metadataReady = Boolean(answers.user_id.trim() && answers.date_of_entry);
+      const canContinue = currentQuestionId === "metadata"
+        ? metadataReady
+        : (currentQuestion.type === "text" ? true : currentValue !== "");
+      const formattedDateOfEntry = answers.date_of_entry
+        ? new Date(`${answers.date_of_entry}T12:00:00`).toLocaleDateString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "";
+=======
       const canContinue = !currentQuestion || currentQuestion.type === "text" ? true : currentValue !== "";
+>>>>>>> origin/main
 
       const getNextQuestionId = (questionId, nextAnswers) => {
         if (questionId === "q1") return nextAnswers.q1_phrase_recalled === "yes" ? "q2" : "q6";
@@ -577,6 +592,18 @@
         setValidation(prev => ({ ...prev, [field]: "" }));
       };
 
+<<<<<<< HEAD
+      const handleMetadataBlur = (field) => {
+        if (field === "user_id" && !answers.user_id.trim()) {
+          setValidation(prev => ({ ...prev, user_id: "Participant ID is required." }));
+        }
+        if (field === "date_of_entry" && !answers.date_of_entry) {
+          setValidation(prev => ({ ...prev, date_of_entry: "Date of Entry is required." }));
+        }
+      };
+
+=======
+>>>>>>> origin/main
       const handleBack = () => {
         if (!canGoBack) return;
         if (currentQuestionId === "metadata") return;
@@ -591,7 +618,11 @@
         if (!canContinue) return;
         if (currentQuestionId === "metadata") {
           const nextValidation = {};
+<<<<<<< HEAD
+          if (!answers.user_id.trim()) nextValidation.user_id = "Participant ID is required.";
+=======
           if (!answers.user_id.trim()) nextValidation.user_id = "User ID is required.";
+>>>>>>> origin/main
           if (!answers.date_of_entry) nextValidation.date_of_entry = "Date of Entry is required.";
           setValidation(nextValidation);
           if (Object.keys(nextValidation).length > 0) return;
@@ -619,14 +650,74 @@
                   Enter your details before starting the check-in.
                 </div>
 
+<<<<<<< HEAD
+                <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 16 }}>
+                  This takes about 30 seconds.
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                      Date of Entry *
+                    </label>
+                    <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>Required</span>
+                  </div>
+                  <input
+                    type="date"
+                    value={answers.date_of_entry}
+                    onChange={e => handleMetadataChange("date_of_entry", e.target.value)}
+                    onBlur={() => handleMetadataBlur("date_of_entry")}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleContinue();
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      border: "1.5px solid var(--card-border)",
+                      background: "var(--surface-alt)",
+                      color: "var(--text-primary)",
+                      fontFamily: "inherit",
+                      fontSize: 15,
+                      outline: "none",
+                    }}
+                  />
+                  {formattedDateOfEntry && <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 6 }}>Selected: {formattedDateOfEntry}</div>}
+                  {validation.date_of_entry && <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>{validation.date_of_entry}</div>}
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                      Participant ID *
+                    </label>
+                    <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>Required</span>
+                  </div>
+=======
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
                     User ID
                   </label>
+>>>>>>> origin/main
                   <input
                     type="text"
                     value={answers.user_id}
                     onChange={e => handleMetadataChange("user_id", e.target.value)}
+<<<<<<< HEAD
+                    onBlur={() => handleMetadataBlur("user_id")}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleContinue();
+                      }
+                    }}
+                    autoFocus
+                    placeholder="e.g., A1024"
+=======
+>>>>>>> origin/main
                     style={{
                       width: "100%",
                       padding: "12px 14px",
@@ -642,6 +733,11 @@
                   {validation.user_id && <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>{validation.user_id}</div>}
                 </div>
 
+<<<<<<< HEAD
+                <button
+                  onClick={handleContinue}
+                  disabled={!metadataReady}
+=======
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
                     Date of Entry
@@ -667,13 +763,19 @@
 
                 <button
                   onClick={handleContinue}
+>>>>>>> origin/main
                   style={{
                     width: "100%",
                     padding: 16,
                     borderRadius: 14,
                     border: "none",
+<<<<<<< HEAD
+                    background: metadataReady ? "var(--btn-primary-bg)" : "var(--card-border)",
+                    color: metadataReady ? "var(--btn-primary-text)" : "var(--text-muted)",
+=======
                     background: "var(--btn-primary-bg)",
                     color: "var(--btn-primary-text)",
+>>>>>>> origin/main
                     fontSize: 15,
                     fontWeight: 700,
                     marginTop: 4,
@@ -681,6 +783,12 @@
                 >
                   Continue
                 </button>
+<<<<<<< HEAD
+                <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 8, textAlign: "center" }}>
+                  Step 1 of 2
+                </div>
+=======
+>>>>>>> origin/main
               </div>
             )}
 
@@ -783,7 +891,6 @@
       const [submitted, setSubmitted] = useState(false);
       const [checkInRecord, setCheckInRecord] = useState(null);
       const [planStatus, setPlanStatus] = useState(null);
-      const tabRefs = useRef({});
 
       const [stress, setStress] = useState(5);
       const [sleepQuality, setSleepQuality] = useState(6);
@@ -816,6 +923,8 @@
         setSubmitted(false);
       };
 
+<<<<<<< HEAD
+=======
       const tabs = [
         { id: "checkin", label: "Check In", icon: "\u{1F4CB}" },
       ];
@@ -827,6 +936,7 @@
         if (el) setIndicatorStyle({ left: el.offsetLeft, width: el.offsetWidth });
       }, [view]);
 
+>>>>>>> origin/main
       const cardStyle = {
         background: "var(--card)", borderRadius: 20, padding: 24,
         border: "1px solid var(--card-border)", marginBottom: 16,
@@ -840,26 +950,22 @@
             <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
               <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>Pressure Conditioned Language System</span>
             </div>
-            <div style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>High-Stress Feedback System</div>
+            <div style={{ fontSize: 15, color: "var(--text-secondary)", fontWeight: 600 }}>High-Stress Feedback System</div>
           </div>
 
-          {/* Tab Bar */}
-          <div className="tab-bar" style={{ display: "flex", gap: 4, background: "var(--surface)", borderRadius: 14, padding: 4, marginBottom: 24, position: "relative" }}>
-            <div className="tab-indicator" style={indicatorStyle} />
-            {tabs.map(t => (
-              <button key={t.id} ref={el => tabRefs.current[t.id] = el}
-                onClick={() => setView(t.id)}
-                style={{
-                  padding: "12px 0", borderRadius: 10, border: "none", flex: 1,
-                  fontWeight: 600, fontSize: 13, position: "relative", zIndex: 1,
-                  background: "transparent",
-                  color: view === t.id ? "var(--nav-active-text)" : "var(--text-muted)",
-                  transition: "color 0.3s",
-                }}
-              >
-                <span style={{ marginRight: 4, fontSize: 14 }}>{t.icon}</span> {t.label}
-              </button>
-            ))}
+          <div style={{
+            marginBottom: 18,
+            background: "var(--surface)",
+            border: "1px solid var(--card-border)",
+            borderRadius: 12,
+            padding: "10px 14px",
+            textAlign: "center",
+            fontSize: 14,
+            fontWeight: 700,
+            color: "var(--text-primary)",
+            letterSpacing: 0.2,
+          }}>
+            Check In
           </div>
 
           {/* ── CHECK-IN VIEW ── */}
@@ -994,7 +1100,7 @@
           )}
 
           {/* Footer */}
-          <div style={{ textAlign: "center", marginTop: 36, paddingBottom: 20, fontSize: 11, color: "var(--text-muted)", opacity: 0.5 }}>
+          <div style={{ textAlign: "center", marginTop: 28, paddingBottom: 20, fontSize: 12, color: "var(--text-secondary)", opacity: 0.75 }}>
             Training Loop v1.0
           </div>
         </div>
