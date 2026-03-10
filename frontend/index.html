@@ -525,6 +525,10 @@
       const currentQuestion = currentQuestionId === "metadata" ? null : CHECKIN_QUESTIONS[currentQuestionId];
       const currentValue = currentQuestion ? (answers[currentQuestion.field] ?? "") : "";
       const canGoBack = history.length > 1;
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> origin/main
       const metadataReady = Boolean(answers.user_id.trim() && answers.date_of_entry);
       const canContinue = currentQuestionId === "metadata"
         ? metadataReady
@@ -537,6 +541,12 @@
             year: "numeric",
           })
         : "";
+<<<<<<< HEAD
+=======
+=======
+      const canContinue = !currentQuestion || currentQuestion.type === "text" ? true : currentValue !== "";
+>>>>>>> origin/main
+>>>>>>> origin/main
 
       const getNextQuestionId = (questionId, nextAnswers) => {
         if (questionId === "q1") return nextAnswers.q1_phrase_recalled === "yes" ? "q2" : "q6";
@@ -588,6 +598,10 @@
         setValidation(prev => ({ ...prev, [field]: "" }));
       };
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> origin/main
       const handleMetadataBlur = (field) => {
         if (field === "user_id" && !answers.user_id.trim()) {
           setValidation(prev => ({ ...prev, user_id: "Participant ID is required." }));
@@ -597,6 +611,11 @@
         }
       };
 
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> origin/main
+>>>>>>> origin/main
       const handleBack = () => {
         if (!canGoBack) return;
         if (currentQuestionId === "metadata") return;
@@ -611,7 +630,15 @@
         if (!canContinue) return;
         if (currentQuestionId === "metadata") {
           const nextValidation = {};
+<<<<<<< HEAD
           if (!answers.user_id.trim()) nextValidation.user_id = "Participant ID is required.";
+=======
+<<<<<<< HEAD
+          if (!answers.user_id.trim()) nextValidation.user_id = "Participant ID is required.";
+=======
+          if (!answers.user_id.trim()) nextValidation.user_id = "User ID is required.";
+>>>>>>> origin/main
+>>>>>>> origin/main
           if (!answers.date_of_entry) nextValidation.date_of_entry = "Date of Entry is required.";
           setValidation(nextValidation);
           if (Object.keys(nextValidation).length > 0) return;
@@ -639,6 +666,10 @@
                   Enter your details before starting the check-in.
                 </div>
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> origin/main
                 <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 16 }}>
                   This takes about 30 seconds.
                 </div>
@@ -684,10 +715,23 @@
                     </label>
                     <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>Required</span>
                   </div>
+<<<<<<< HEAD
+=======
+=======
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+                    User ID
+                  </label>
+>>>>>>> origin/main
+>>>>>>> origin/main
                   <input
                     type="text"
                     value={answers.user_id}
                     onChange={e => handleMetadataChange("user_id", e.target.value)}
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> origin/main
                     onBlur={() => handleMetadataBlur("user_id")}
                     onKeyDown={e => {
                       if (e.key === "Enter") {
@@ -697,6 +741,11 @@
                     }}
                     autoFocus
                     placeholder="e.g., A1024"
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> origin/main
+>>>>>>> origin/main
                     style={{
                       width: "100%",
                       padding: "12px 14px",
@@ -712,16 +761,60 @@
                   {validation.user_id && <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>{validation.user_id}</div>}
                 </div>
 
+<<<<<<< HEAD
                 <button
                   onClick={handleContinue}
                   disabled={!metadataReady}
+=======
+<<<<<<< HEAD
+                <button
+                  onClick={handleContinue}
+                  disabled={!metadataReady}
+=======
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+                    Date of Entry
+                  </label>
+                  <input
+                    type="date"
+                    value={answers.date_of_entry}
+                    onChange={e => handleMetadataChange("date_of_entry", e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      border: "1.5px solid var(--card-border)",
+                      background: "var(--surface-alt)",
+                      color: "var(--text-primary)",
+                      fontFamily: "inherit",
+                      fontSize: 15,
+                      outline: "none",
+                    }}
+                  />
+                  {validation.date_of_entry && <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>{validation.date_of_entry}</div>}
+                </div>
+
+                <button
+                  onClick={handleContinue}
+>>>>>>> origin/main
+>>>>>>> origin/main
                   style={{
                     width: "100%",
                     padding: 16,
                     borderRadius: 14,
                     border: "none",
+<<<<<<< HEAD
                     background: metadataReady ? "var(--btn-primary-bg)" : "var(--card-border)",
                     color: metadataReady ? "var(--btn-primary-text)" : "var(--text-muted)",
+=======
+<<<<<<< HEAD
+                    background: metadataReady ? "var(--btn-primary-bg)" : "var(--card-border)",
+                    color: metadataReady ? "var(--btn-primary-text)" : "var(--text-muted)",
+=======
+                    background: "var(--btn-primary-bg)",
+                    color: "var(--btn-primary-text)",
+>>>>>>> origin/main
+>>>>>>> origin/main
                     fontSize: 15,
                     fontWeight: 700,
                     marginTop: 4,
@@ -729,9 +822,18 @@
                 >
                   Continue
                 </button>
+<<<<<<< HEAD
                 <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 8, textAlign: "center" }}>
                   Step 1 of 2
                 </div>
+=======
+<<<<<<< HEAD
+                <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 8, textAlign: "center" }}>
+                  Step 1 of 2
+                </div>
+=======
+>>>>>>> origin/main
+>>>>>>> origin/main
               </div>
             )}
 
@@ -866,6 +968,23 @@
         setSubmitted(false);
       };
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+      const tabs = [
+        { id: "checkin", label: "Check In", icon: "\u{1F4CB}" },
+      ];
+
+      // Tab indicator position
+      const [indicatorStyle, setIndicatorStyle] = useState({});
+      useEffect(() => {
+        const el = tabRefs.current[view];
+        if (el) setIndicatorStyle({ left: el.offsetLeft, width: el.offsetWidth });
+      }, [view]);
+
+>>>>>>> origin/main
+>>>>>>> origin/main
       const cardStyle = {
         background: "var(--card)", borderRadius: 20, padding: 24,
         border: "1px solid var(--card-border)", marginBottom: 16,
