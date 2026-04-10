@@ -185,6 +185,35 @@
       return API_BASE ? `${API_BASE}${path}` : path;
     }
 
+    async function requestJson(path, options = {}) {
+      const res = await fetch(apiUrl(path), options);
+      const contentType = (res.headers.get("content-type") || "").toLowerCase();
+
+      if (!res.ok) {
+        let detail = "";
+        if (contentType.includes("application/json")) {
+          try {
+            const body = await res.json();
+            detail = body?.detail ? String(body.detail) : "";
+          } catch (_) {}
+        } else {
+          try {
+            detail = (await res.text()).slice(0, 120);
+          } catch (_) {}
+        }
+        throw new Error(detail || `Request failed (${res.status})`);
+      }
+
+      if (!contentType.includes("application/json")) {
+        if (!API_BASE) {
+          throw new Error("API base URL is not configured. Open Admin and set your backend URL.");
+        }
+        throw new Error("API returned non-JSON response.");
+      }
+
+      return res.json();
+    }
+
     // ── Logic ───────────────────────────────────────────────
     function computeReadiness(data) {
       const weights = { stress: -0.20, sleepQuality: 0.25, soreness: -0.15, energy: 0.25, motivation: 0.15 };
@@ -858,6 +887,11 @@
       const [metrics, setMetrics] = useState(null);
       const [metricsError, setMetricsError] = useState("");
       const [loadingMetrics, setLoadingMetrics] = useState(false);
+      const [apiBaseDraft, setApiBaseDraft] = useState(() => {
+        const fromWindow = typeof window !== "undefined" ? window.__PCLS_API_BASE__ || "" : "";
+        const fromStorage = typeof window !== "undefined" ? window.localStorage.getItem("PCLS_API_BASE") || "" : "";
+        return fromWindow || fromStorage || "";
+      });
 
       const [stress, setStress] = useState(5);
       const [sleepQuality, setSleepQuality] = useState(6);
@@ -879,7 +913,7 @@
       if (noteParts.length === 0) noteParts.push("All systems looking good. Train with confidence.");
 
       const handleCheckInSave = (record) => {
-        return fetch(apiUrl("/api/v1/phrase-checkin"), {
+        return requestJson("/api/v1/phrase-checkin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -895,16 +929,6 @@
             timestamp: record.timestamp,
             client_source: "web",
           }),
-        }).then(async (res) => {
-          if (!res.ok) {
-            let msg = "Could not save check-in.";
-            try {
-              const body = await res.json();
-              if (body?.detail) msg = String(body.detail);
-            } catch (_) {}
-            throw new Error(msg);
-          }
-          return res.json();
         }).then((saved) => {
           setCheckInRecord(saved);
           setSubmitted(true);
@@ -914,16 +938,22 @@
       useEffect(() => {
         setLoadingMetrics(true);
         setMetricsError("");
-        fetch(apiUrl("/api/v1/metrics/overview?days=30"))
-          .then(async (res) => {
-            if (!res.ok) throw new Error("Could not load metrics.");
-            return res.json();
-          })
+        requestJson("/api/v1/metrics/overview?days=30")
           .then((data) => setMetrics(data))
-          .catch((err) => setMetricsError(err.message || "Could not load metrics."))
+          .catch((err) => setMetricsError(err.message || "Could not load metrics. Configure API base in Admin if needed."))
           .finally(() => setLoadingMetrics(false));
       }, [submitted]);
 
+      
+      const handleSaveApiBase = () => {
+        const trimmed = apiBaseDraft.trim().replace(/\/$/, "");
+        if (!trimmed) {
+          window.localStorage.removeItem("PCLS_API_BASE");
+        } else {
+          window.localStorage.setItem("PCLS_API_BASE", trimmed);
+        }
+        window.location.reload();
+      };
       const handleReset = () => {
         setStress(5); setSleepQuality(6); setSoreness(4); setEnergy(6); setMotivation(7);
         setHrv(""); setRhr(""); setSleepHours("");
@@ -960,6 +990,45 @@
             letterSpacing: 0.2,
           }}>
             Check In
+          </div>
+
+          <div style={{ ...cardStyle, padding: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-primary)", marginBottom: 8 }}>Backend API Connection</div>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 8 }}>
+              Set your backend URL once (example: `https://your-backend.up.railway.app`).
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                type="text"
+                value={apiBaseDraft}
+                onChange={(e) => setApiBaseDraft(e.target.value)}
+                placeholder="https://your-backend.up.railway.app"
+                style={{
+                  flex: 1,
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1.5px solid var(--card-border)",
+                  background: "var(--surface-alt)",
+                  color: "var(--text-primary)",
+                  fontFamily: "inherit",
+                  fontSize: 13,
+                }}
+              />
+              <button
+                onClick={handleSaveApiBase}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "var(--btn-primary-bg)",
+                  color: "var(--btn-primary-text)",
+                  fontWeight: 700,
+                  fontSize: 13,
+                }}
+              >
+                Save
+              </button>
+            </div>
           </div>
 
           {/* ── CHECK-IN VIEW ── */}
