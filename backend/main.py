@@ -12,6 +12,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy import select
@@ -60,10 +61,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+security = HTTPBasic()
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "Eric")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "Smith")
+
 
 async def get_db():
     async with SessionLocal() as session:
         yield session
+
+
+def _require_admin(credentials: HTTPBasicCredentials = Depends(security)):
+    if credentials.username != ADMIN_USERNAME or credentials.password != ADMIN_PASSWORD:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid admin credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return True
 
 
 # ── Routes ─────────────────────────────────────────────────
@@ -372,4 +387,45 @@ async def metrics_overview(
         },
         "source_counts": source_counts,
         "trend": trend,
+    }
+
+
+@app.get("/api/v1/admin/checkins")
+async def admin_checkins(
+    limit: int = 200,
+    _: bool = Depends(_require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    if limit < 1:
+        raise HTTPException(400, "limit must be >= 1")
+    if limit > 1000:
+        raise HTTPException(400, "limit must be <= 1000")
+
+    result = await db.execute(
+        select(PhraseCheckInRow, UserRow.external_id)
+        .join(UserRow, UserRow.id == PhraseCheckInRow.user_id)
+        .order_by(PhraseCheckInRow.created_at.desc())
+        .limit(limit)
+    )
+    rows = result.all()
+
+    return {
+        "count": len(rows),
+        "rows": [
+            {
+                "participant_id": external_id,
+                "date_of_entry": str(row.date_of_entry),
+                "q1_phrase_recalled": row.q1_phrase_recalled,
+                "q2_recall_mode": row.q2_recall_mode,
+                "q3_timing": row.q3_timing,
+                "q4_effect": row.q4_effect,
+                "q5_situation_text": row.q5_situation_text,
+                "q6_attempted_recall": row.q6_attempted_recall,
+                "q7_additional_text": row.q7_additional_text,
+                "timestamp": row.timestamp.isoformat() if row.timestamp else None,
+                "client_source": row.client_source,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+            }
+            for row, external_id in rows
+        ],
     }
