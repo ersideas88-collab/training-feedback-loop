@@ -11,14 +11,13 @@ from datetime import date, timedelta
 from uuid import UUID
 
 from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy import select
 
 from models import (
-    Base, UserRow, CheckInRow, SessionPlanRow, PhraseCheckInRow,
+    Base, UserRow, CheckInRow, SessionPlanRow,
     CheckInCreate, CheckInWithPlanResponse,
-    CheckInResponse, SessionPlanResponse, PhraseCheckInCreate,
+    CheckInResponse, SessionPlanResponse,
 )
 from readiness import generate_plan, compute_readiness_score
 
@@ -43,20 +42,6 @@ app = FastAPI(
     title="Pressure Conditioned Language System",
     version="1.0.0",
     lifespan=lifespan,
-)
-
-cors_origins_env = os.getenv("CORS_ORIGINS", "*").strip()
-if cors_origins_env == "*":
-    cors_origins = ["*"]
-else:
-    cors_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 
@@ -237,66 +222,4 @@ async def get_history(
             }
             for p in plans.scalars().all()
         ],
-    }
-
-
-@app.post("/phrase-checkin")
-async def create_phrase_checkin(
-    payload: PhraseCheckInCreate,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Save the phrase check-in questionnaire captured by the Check in UI.
-    Creates the user row if the participant_id is new.
-    """
-    result = await db.execute(
-        select(UserRow).where(UserRow.external_id == payload.participant_id)
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        user = UserRow(external_id=payload.participant_id)
-        db.add(user)
-        await db.flush()
-
-    existing = await db.execute(
-        select(PhraseCheckInRow).where(
-            PhraseCheckInRow.user_id == user.id,
-            PhraseCheckInRow.date_of_entry == payload.date_of_entry,
-        )
-    )
-    row = existing.scalar_one_or_none()
-
-    if not row:
-        row = PhraseCheckInRow(
-            user_id=user.id,
-            date_of_entry=payload.date_of_entry,
-            q1_phrase_recalled=payload.q1_phrase_recalled,
-            q2_recall_mode=payload.q2_recall_mode,
-            q3_timing=payload.q3_timing,
-            q4_effect=payload.q4_effect,
-            q5_situation_text=payload.q5_situation_text,
-            q6_attempted_recall=payload.q6_attempted_recall,
-            q7_additional_text=payload.q7_additional_text,
-            timestamp=payload.timestamp,
-        )
-        db.add(row)
-    else:
-        row.q1_phrase_recalled = payload.q1_phrase_recalled
-        row.q2_recall_mode = payload.q2_recall_mode
-        row.q3_timing = payload.q3_timing
-        row.q4_effect = payload.q4_effect
-        row.q5_situation_text = payload.q5_situation_text
-        row.q6_attempted_recall = payload.q6_attempted_recall
-        row.q7_additional_text = payload.q7_additional_text
-        row.timestamp = payload.timestamp
-
-    await db.commit()
-    await db.refresh(row)
-
-    return {
-        "saved": True,
-        "id": str(row.id),
-        "user_id": str(user.id),
-        "participant_id": user.external_id,
-        "date_of_entry": str(row.date_of_entry),
     }
