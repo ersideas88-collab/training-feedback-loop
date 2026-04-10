@@ -858,6 +858,13 @@
       const [metrics, setMetrics] = useState(null);
       const [metricsError, setMetricsError] = useState("");
       const [loadingMetrics, setLoadingMetrics] = useState(false);
+      const [showAdmin, setShowAdmin] = useState(false);
+      const [adminUsername, setAdminUsername] = useState("");
+      const [adminPassword, setAdminPassword] = useState("");
+      const [adminToken, setAdminToken] = useState("");
+      const [adminRows, setAdminRows] = useState([]);
+      const [adminError, setAdminError] = useState("");
+      const [loadingAdmin, setLoadingAdmin] = useState(false);
 
       const [stress, setStress] = useState(5);
       const [sleepQuality, setSleepQuality] = useState(6);
@@ -924,6 +931,45 @@
           .finally(() => setLoadingMetrics(false));
       }, [submitted]);
 
+      const loadAdminRows = (token) => {
+        setLoadingAdmin(true);
+        setAdminError("");
+        fetch(apiUrl("/api/v1/admin/checkins?limit=200"), {
+          headers: { Authorization: `Basic ${token}` },
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              if (res.status === 401) throw new Error("Invalid username or password.");
+              throw new Error("Could not load database rows.");
+            }
+            return res.json();
+          })
+          .then((data) => setAdminRows(data.rows || []))
+          .catch((err) => {
+            setAdminRows([]);
+            setAdminError(err.message || "Could not load database rows.");
+          })
+          .finally(() => setLoadingAdmin(false));
+      };
+
+      const handleAdminLogin = () => {
+        if (!adminUsername.trim() || !adminPassword) {
+          setAdminError("Username and password are required.");
+          return;
+        }
+        const token = btoa(`${adminUsername}:${adminPassword}`);
+        setAdminToken(token);
+        loadAdminRows(token);
+      };
+
+      const handleAdminLogout = () => {
+        setAdminToken("");
+        setAdminRows([]);
+        setAdminUsername("");
+        setAdminPassword("");
+        setAdminError("");
+      };
+
       const handleReset = () => {
         setStress(5); setSleepQuality(6); setSoreness(4); setEnergy(6); setMotivation(7);
         setHrv(""); setRhr(""); setSleepHours("");
@@ -940,12 +986,160 @@
       return (
         <div>
           {/* Header */}
-          <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ textAlign: "center", marginBottom: 28, position: "relative" }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
               <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>Pressure Conditioned Language System</span>
             </div>
             <div style={{ fontSize: 15, color: "var(--text-secondary)", fontWeight: 600 }}>High-Stress Feedback System</div>
+            <button
+              onClick={() => setShowAdmin(prev => !prev)}
+              style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                border: "1px solid var(--card-border)",
+                background: "var(--card)",
+                color: "var(--text-secondary)",
+                borderRadius: 8,
+                padding: "6px 10px",
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              {showAdmin ? "Close Admin" : "Admin"}
+            </button>
           </div>
+
+          {showAdmin && (
+            <div style={cardStyle}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)", marginBottom: 12 }}>
+                Admin Database View
+              </div>
+
+              {!adminToken && (
+                <div>
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6 }}>Username</label>
+                    <input
+                      type="text"
+                      value={adminUsername}
+                      onChange={e => setAdminUsername(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        border: "1.5px solid var(--card-border)",
+                        background: "var(--surface-alt)",
+                        color: "var(--text-primary)",
+                        fontFamily: "inherit",
+                        fontSize: 14,
+                      }}
+                    />
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6 }}>Password</label>
+                    <input
+                      type="password"
+                      value={adminPassword}
+                      onChange={e => setAdminPassword(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        border: "1.5px solid var(--card-border)",
+                        background: "var(--surface-alt)",
+                        color: "var(--text-primary)",
+                        fontFamily: "inherit",
+                        fontSize: 14,
+                      }}
+                    />
+                  </div>
+                  <button
+                    onClick={handleAdminLogin}
+                    style={{
+                      width: "100%",
+                      padding: 12,
+                      borderRadius: 10,
+                      border: "none",
+                      background: "var(--btn-primary-bg)",
+                      color: "var(--btn-primary-text)",
+                      fontWeight: 700,
+                      fontSize: 14,
+                    }}
+                  >
+                    View Database
+                  </button>
+                </div>
+              )}
+
+              {adminToken && (
+                <div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                    <button
+                      onClick={() => loadAdminRows(adminToken)}
+                      style={{
+                        flex: 1,
+                        padding: 10,
+                        borderRadius: 10,
+                        border: "1px solid var(--card-border)",
+                        background: "var(--surface)",
+                        color: "var(--text-primary)",
+                        fontWeight: 700,
+                        fontSize: 13,
+                      }}
+                    >
+                      Refresh
+                    </button>
+                    <button
+                      onClick={handleAdminLogout}
+                      style={{
+                        flex: 1,
+                        padding: 10,
+                        borderRadius: 10,
+                        border: "1px solid var(--card-border)",
+                        background: "var(--card)",
+                        color: "var(--text-secondary)",
+                        fontWeight: 700,
+                        fontSize: 13,
+                      }}
+                    >
+                      Log Out
+                    </button>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 8 }}>
+                    Showing {adminRows.length} recent entries
+                  </div>
+
+                  <div style={{ overflowX: "auto", border: "1px solid var(--card-border)", borderRadius: 10 }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ background: "var(--surface)" }}>
+                          <th style={{ padding: "8px 10px", textAlign: "left", borderBottom: "1px solid var(--card-border)" }}>User ID</th>
+                          <th style={{ padding: "8px 10px", textAlign: "left", borderBottom: "1px solid var(--card-border)" }}>Date</th>
+                          <th style={{ padding: "8px 10px", textAlign: "left", borderBottom: "1px solid var(--card-border)" }}>Q1</th>
+                          <th style={{ padding: "8px 10px", textAlign: "left", borderBottom: "1px solid var(--card-border)" }}>Source</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminRows.map((row, idx) => (
+                          <tr key={`${row.participant_id}-${row.date_of_entry}-${idx}`}>
+                            <td style={{ padding: "8px 10px", borderBottom: "1px solid var(--surface)" }}>{row.participant_id}</td>
+                            <td style={{ padding: "8px 10px", borderBottom: "1px solid var(--surface)" }}>{row.date_of_entry}</td>
+                            <td style={{ padding: "8px 10px", borderBottom: "1px solid var(--surface)" }}>{row.q1_phrase_recalled}</td>
+                            <td style={{ padding: "8px 10px", borderBottom: "1px solid var(--surface)" }}>{row.client_source}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {loadingAdmin && <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 8 }}>Loading...</div>}
+              {adminError && <div style={{ fontSize: 12, color: "var(--red)", marginTop: 8 }}>{adminError}</div>}
+            </div>
+          )}
 
           <div style={{
             marginBottom: 18,
