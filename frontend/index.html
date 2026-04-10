@@ -175,6 +175,16 @@
       peak: "Max effort / testing day",
     };
 
+    const API_BASE = (() => {
+      const fromWindow = typeof window !== "undefined" ? window.__PCLS_API_BASE__ : "";
+      const fromStorage = typeof window !== "undefined" ? window.localStorage.getItem("PCLS_API_BASE") : "";
+      return (fromWindow || fromStorage || "").replace(/\/$/, "");
+    })();
+
+    function apiUrl(path) {
+      return API_BASE ? `${API_BASE}${path}` : path;
+    }
+
     // ── Logic ───────────────────────────────────────────────
     function computeReadiness(data) {
       const weights = { stress: -0.20, sleepQuality: 0.25, soreness: -0.15, energy: 0.25, motivation: 0.15 };
@@ -521,6 +531,8 @@
       const [answers, setAnswers] = useState(CHECKIN_INITIAL_DATA);
       const [history, setHistory] = useState(["metadata"]);
       const [validation, setValidation] = useState({});
+      const [submitting, setSubmitting] = useState(false);
+      const [submitError, setSubmitError] = useState("");
       const currentQuestionId = history[history.length - 1];
       const currentQuestion = currentQuestionId === "metadata" ? null : CHECKIN_QUESTIONS[currentQuestionId];
       const currentValue = currentQuestion ? (answers[currentQuestion.field] ?? "") : "";
@@ -608,6 +620,7 @@
       };
 
       const handleContinue = () => {
+        if (submitting) return;
         if (!canContinue) return;
         if (currentQuestionId === "metadata") {
           const nextValidation = {};
@@ -623,7 +636,13 @@
           setHistory(prev => [...prev, nextQuestionId]);
           return;
         }
-        onSave({ ...answers, timestamp: new Date().toISOString() });
+        setSubmitError("");
+        setSubmitting(true);
+        Promise.resolve(onSave({ ...answers, timestamp: new Date().toISOString() }))
+          .catch((err) => {
+            setSubmitError(err?.message || "Could not save check-in. Try again.");
+          })
+          .finally(() => setSubmitting(false));
       };
 
       return (
@@ -788,20 +807,22 @@
                 />
                 <button
                   onClick={handleContinue}
+                  disabled={submitting}
                   style={{
                     width: "100%",
                     padding: 16,
                     borderRadius: 14,
                     border: "none",
-                    background: "var(--btn-primary-bg)",
-                    color: "var(--btn-primary-text)",
+                    background: submitting ? "var(--card-border)" : "var(--btn-primary-bg)",
+                    color: submitting ? "var(--text-muted)" : "var(--btn-primary-text)",
                     fontSize: 15,
                     fontWeight: 700,
                     marginTop: 14,
                   }}
                 >
-                  {currentQuestionId === "q7" ? "Save Check-In" : "Continue"}
+                  {submitting ? "Saving..." : (currentQuestionId === "q7" ? "Save Check-In" : "Continue")}
                 </button>
+                {submitError && <div style={{ fontSize: 12, color: "var(--red)", marginTop: 8 }}>{submitError}</div>}
               </div>
             )}
 
@@ -834,6 +855,9 @@
       const [submitted, setSubmitted] = useState(false);
       const [checkInRecord, setCheckInRecord] = useState(null);
       const [planStatus, setPlanStatus] = useState(null);
+      const [metrics, setMetrics] = useState(null);
+      const [metricsError, setMetricsError] = useState("");
+      const [loadingMetrics, setLoadingMetrics] = useState(false);
 
       const [stress, setStress] = useState(5);
       const [sleepQuality, setSleepQuality] = useState(6);
@@ -855,9 +879,50 @@
       if (noteParts.length === 0) noteParts.push("All systems looking good. Train with confidence.");
 
       const handleCheckInSave = (record) => {
-        setCheckInRecord(record);
-        setSubmitted(true);
+        return fetch(apiUrl("/api/v1/phrase-checkin"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            participant_id: record.user_id,
+            date_of_entry: record.date_of_entry,
+            q1_phrase_recalled: record.q1_phrase_recalled,
+            q2_recall_mode: record.q2_recall_mode,
+            q3_timing: record.q3_timing,
+            q4_effect: record.q4_effect,
+            q5_situation_text: record.q5_situation_text,
+            q6_attempted_recall: record.q6_attempted_recall,
+            q7_additional_text: record.q7_additional_text,
+            timestamp: record.timestamp,
+            client_source: "web",
+          }),
+        }).then(async (res) => {
+          if (!res.ok) {
+            let msg = "Could not save check-in.";
+            try {
+              const body = await res.json();
+              if (body?.detail) msg = String(body.detail);
+            } catch (_) {}
+            throw new Error(msg);
+          }
+          return res.json();
+        }).then((saved) => {
+          setCheckInRecord(saved);
+          setSubmitted(true);
+        });
       };
+
+      useEffect(() => {
+        setLoadingMetrics(true);
+        setMetricsError("");
+        fetch(apiUrl("/api/v1/metrics/overview?days=30"))
+          .then(async (res) => {
+            if (!res.ok) throw new Error("Could not load metrics.");
+            return res.json();
+          })
+          .then((data) => setMetrics(data))
+          .catch((err) => setMetricsError(err.message || "Could not load metrics."))
+          .finally(() => setLoadingMetrics(false));
+      }, [submitted]);
 
       const handleReset = () => {
         setStress(5); setSleepQuality(6); setSoreness(4); setEnergy(6); setMotivation(7);
@@ -899,7 +964,46 @@
 
           {/* ── CHECK-IN VIEW ── */}
           {view === "checkin" && !submitted && (
-            <CheckInFlow cardStyle={cardStyle} onSave={handleCheckInSave} />
+            <div className="view-enter">
+              <CheckInFlow cardStyle={cardStyle} onSave={handleCheckInSave} />
+              <div style={cardStyle}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)" }}>30-Day Overview</div>
+                  <div style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>
+                    {loadingMetrics ? "Updating..." : "Live"}
+                  </div>
+                </div>
+
+                {metricsError && <div style={{ fontSize: 12, color: "var(--red)" }}>{metricsError}</div>}
+
+                {!metricsError && metrics && (
+                  <div>
+                    <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+                      <div style={{ flex: 1, background: "var(--surface)", border: "1px solid var(--card-border)", borderRadius: 10, padding: 10 }}>
+                        <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>Entries</div>
+                        <div style={{ fontSize: 22, fontWeight: 800 }}>{metrics.totals.entries}</div>
+                      </div>
+                      <div style={{ flex: 1, background: "var(--surface)", border: "1px solid var(--card-border)", borderRadius: 10, padding: 10 }}>
+                        <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>Recall Rate</div>
+                        <div style={{ fontSize: 22, fontWeight: 800 }}>{Math.round((metrics.totals.recall_rate || 0) * 100)}%</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "end", gap: 4, height: 74 }}>
+                      {metrics.trend.slice(-10).map((d, i) => {
+                        const h = Math.max(8, d.entries * 10);
+                        return (
+                          <div key={i} style={{ flex: 1, textAlign: "center" }}>
+                            <div style={{ height: h, borderRadius: 6, background: "var(--btn-primary-bg)", opacity: 0.85 }} />
+                            <div style={{ fontSize: 9, color: "var(--text-secondary)", marginTop: 4 }}>{d.date.slice(5)}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* ── POST-SUBMIT ── */}

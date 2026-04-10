@@ -8,16 +8,18 @@ All in one transaction. No triggers, no cloud functions, no event-driven mystery
 import os
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
+from typing import Optional
 from uuid import UUID
 
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy import select
 
 from models import (
-    Base, UserRow, CheckInRow, SessionPlanRow,
+    Base, UserRow, CheckInRow, SessionPlanRow, PhraseCheckInRow,
     CheckInCreate, CheckInWithPlanResponse,
-    CheckInResponse, SessionPlanResponse,
+    CheckInResponse, SessionPlanResponse, PhraseCheckInCreate,
 )
 from readiness import generate_plan, compute_readiness_score
 
@@ -42,6 +44,20 @@ app = FastAPI(
     title="Pressure Conditioned Language System",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+cors_origins_env = os.getenv("CORS_ORIGINS", "*").strip()
+if cors_origins_env == "*":
+    cors_origins = ["*"]
+else:
+    cors_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -222,4 +238,138 @@ async def get_history(
             }
             for p in plans.scalars().all()
         ],
+    }
+
+
+async def _save_phrase_checkin(payload: PhraseCheckInCreate, db: AsyncSession):
+    # Create/find user by participant external ID
+    result = await db.execute(
+        select(UserRow).where(UserRow.external_id == payload.participant_id)
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        user = UserRow(external_id=payload.participant_id)
+        db.add(user)
+        await db.flush()
+
+    # Upsert one row per date per user
+    existing = await db.execute(
+        select(PhraseCheckInRow).where(
+            PhraseCheckInRow.user_id == user.id,
+            PhraseCheckInRow.date_of_entry == payload.date_of_entry,
+        )
+    )
+    row = existing.scalar_one_or_none()
+    if row is None:
+        row = PhraseCheckInRow(
+            user_id=user.id,
+            date_of_entry=payload.date_of_entry,
+            q1_phrase_recalled=payload.q1_phrase_recalled,
+            q2_recall_mode=payload.q2_recall_mode,
+            q3_timing=payload.q3_timing,
+            q4_effect=payload.q4_effect,
+            q5_situation_text=payload.q5_situation_text,
+            q6_attempted_recall=payload.q6_attempted_recall,
+            q7_additional_text=payload.q7_additional_text,
+            timestamp=payload.timestamp,
+            client_source=payload.client_source,
+        )
+        db.add(row)
+    else:
+        row.q1_phrase_recalled = payload.q1_phrase_recalled
+        row.q2_recall_mode = payload.q2_recall_mode
+        row.q3_timing = payload.q3_timing
+        row.q4_effect = payload.q4_effect
+        row.q5_situation_text = payload.q5_situation_text
+        row.q6_attempted_recall = payload.q6_attempted_recall
+        row.q7_additional_text = payload.q7_additional_text
+        row.timestamp = payload.timestamp
+        row.client_source = payload.client_source
+
+    await db.commit()
+    await db.refresh(row)
+    return {
+        "saved": True,
+        "id": str(row.id),
+        "user_id": str(user.id),
+        "participant_id": user.external_id,
+        "date_of_entry": str(row.date_of_entry),
+        "client_source": row.client_source,
+    }
+
+
+@app.post("/phrase-checkin")
+async def create_phrase_checkin_legacy(
+    payload: PhraseCheckInCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    return await _save_phrase_checkin(payload, db)
+
+
+@app.post("/api/v1/phrase-checkin")
+async def create_phrase_checkin_v1(
+    payload: PhraseCheckInCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    return await _save_phrase_checkin(payload, db)
+
+
+@app.get("/api/v1/metrics/overview")
+async def metrics_overview(
+    days: int = 30,
+    participant_id: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    if days < 1:
+        raise HTTPException(400, "days must be >= 1")
+    if days > 365:
+        raise HTTPException(400, "days must be <= 365")
+
+    cutoff = date.today() - timedelta(days=days - 1)
+
+    query = (
+        select(PhraseCheckInRow, UserRow.external_id)
+        .join(UserRow, UserRow.id == PhraseCheckInRow.user_id)
+        .where(PhraseCheckInRow.date_of_entry >= cutoff)
+    )
+    if participant_id:
+        query = query.where(UserRow.external_id == participant_id)
+
+    result = await db.execute(query.order_by(PhraseCheckInRow.date_of_entry.asc()))
+    rows = result.all()
+
+    total_entries = len(rows)
+    recalled_yes = sum(1 for row, _ in rows if row.q1_phrase_recalled == "yes")
+    recalled_no = sum(1 for row, _ in rows if row.q1_phrase_recalled == "no")
+
+    source_counts = {"web": 0, "app": 0}
+    daily = {}
+    for row, _ in rows:
+        src = row.client_source if row.client_source in source_counts else "web"
+        source_counts[src] += 1
+        key = str(row.date_of_entry)
+        if key not in daily:
+            daily[key] = {"date": key, "entries": 0, "recalled_yes": 0, "recalled_no": 0}
+        daily[key]["entries"] += 1
+        if row.q1_phrase_recalled == "yes":
+            daily[key]["recalled_yes"] += 1
+        elif row.q1_phrase_recalled == "no":
+            daily[key]["recalled_no"] += 1
+
+    trend = [daily[k] for k in sorted(daily.keys())]
+    recall_rate = (recalled_yes / total_entries) if total_entries else 0.0
+
+    return {
+        "range_days": days,
+        "from_date": str(cutoff),
+        "to_date": str(date.today()),
+        "participant_filter": participant_id,
+        "totals": {
+            "entries": total_entries,
+            "recalled_yes": recalled_yes,
+            "recalled_no": recalled_no,
+            "recall_rate": round(recall_rate, 4),
+        },
+        "source_counts": source_counts,
+        "trend": trend,
     }
