@@ -15,7 +15,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from models import (
     Base, UserRow, CheckInRow, SessionPlanRow, PhraseCheckInRow,
@@ -37,6 +37,28 @@ SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Backward-compatible schema patch for already-deployed databases.
+        # create_all() does not alter existing tables, so add new columns/indexes if missing.
+        await conn.execute(text("""
+            ALTER TABLE phrase_check_ins
+            ADD COLUMN IF NOT EXISTS client_source VARCHAR(20) NOT NULL DEFAULT 'web'
+        """))
+        await conn.execute(text("""
+            ALTER TABLE phrase_check_ins
+            ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()
+        """))
+        await conn.execute(text("""
+            ALTER TABLE phrase_check_ins
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()
+        """))
+        await conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_phrase_check_ins_user_date
+            ON phrase_check_ins (user_id, date_of_entry)
+        """))
+        await conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_phrase_check_ins_source
+            ON phrase_check_ins (client_source)
+        """))
     yield
     await engine.dispose()
 
